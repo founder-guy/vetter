@@ -60,6 +60,45 @@ node bin/vetter install <package> --json --no-install
 
 **Spinner Suppression**: In JSON mode (`--json`), spinners must be `null` to avoid contaminating stdout. Warnings go to stderr only.
 
+### Caching Layer ([src/cache.ts](src/cache.ts))
+
+**Cache Key**: SHA-1 hash of normalized `package@version` (e.g., `lodash@4.17.21`)
+**Storage**: JSON file per entry in `~/.cache/vetter/entries/` (or platform equivalent)
+**TTL**: 7 days (hardcoded in v0.2)
+**Size Limit**: 50MB (automatically prunes oldest entries when exceeded)
+
+**Flow**:
+1. Always fetch metadata first (cheap, needed for publish date validation)
+2. Attempt cache load (unless `--no-cache`/`--refresh`)
+3. Validate: cache version, publish date, TTL
+4. On hit: render cached result, skip analysis
+5. On miss: run full analysis, save to cache
+6. After save: check cache size and prune if >50MB (deletes oldest entries first)
+
+**Invalidation Rules** (checked in order):
+1. Cache version mismatch → hard invalidate (schema changed)
+2. Publish date differs → hard invalidate (package republished)
+3. TTL exceeded (`now - cachedAt > 7 days`) → hard invalidate
+4. `--no-cache` flag → bypass cache entirely
+5. `--refresh` flag → skip load, force save
+
+**Concurrency**: Atomic writes via temp file + rename; race-safe across parallel runs.
+
+**Date Serialization**: JSON.stringify converts Date objects to ISO strings; loadCache reconstructs them via `new Date()`.
+
+**Size Management**:
+- 50MB hard limit enforced automatically after each save
+- Pruning deletes oldest entries first (by mtime) until cache ≤ 50MB
+- Pruning is silent unless entries are deleted (then logs to stderr)
+- Sorting by mtime ensures recently-used packages are kept
+
+**Pitfalls**:
+- Cache directory creation can fail silently (logs to stderr, continues)
+- Large entries (>1MB) log warning but still cache
+- Always validate publish date to catch republished packages
+- Cache hit/miss status logged to stderr (unless `--json`)
+- Pruning can be expensive (stats all files) but only runs when saving, not loading
+
 ## Grading Algorithm ([src/scoring.ts](src/scoring.ts))
 
 The scoring is penalty-based, starting at grade A (0 points):
@@ -115,6 +154,8 @@ Regex for scoped: `/^(@[^/]+\/[^@]+)(?:@(.+))?$/`
 - **Unit tests** in `__tests__/` use mocks for deterministic, offline testing:
   - `scoring.test.ts`: Pure functions (scoring logic, parsing)
   - `npm.test.ts`: Mocks `npm-registry-fetch` to avoid network calls
+  - `cache.test.ts`: Cache module (load/save, TTL, invalidation, pruning) using real temp filesystem
+  - `cache-integration.test.ts`: Cache behavior with mocked services (tests cache/refresh logic but not actual CLI flag handling)
 - **Manual testing** with real packages via CLI:
   - Healthy: `tiny-invariant`, `countup.js`
   - Bloated: `express` (68 deps)
@@ -122,6 +163,10 @@ Regex for scoped: `/^(@[^/]+\/[^@]+)(?:@(.+))?$/`
 - **Edge case**: Unknown dependency count (simulate by breaking temp workspace)
 
 **Mocking approach**: Tests use `vi.mock('npm-registry-fetch')` with realistic packument structures. This ensures tests run instantly, work offline, and never flake due to registry issues.
+
+**Cache tests**: Use real filesystem (`fs.mkdtemp`) instead of memfs to avoid mocking layer mismatches. Each test gets isolated temp directory.
+
+**CLI flag testing**: `--no-cache` and `--refresh` flags are manually verified via CLI (`node bin/vetter install <pkg> --no-cache`). Automated CLI-level flag tests would require spawning the process or invoking the action handler, which adds complexity.
 
 When adding new scoring rules, always add corresponding test in `__tests__/scoring.test.ts`.
 

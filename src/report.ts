@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import type { AnalysisResult } from './types.js';
 import * as readline from 'node:readline/promises';
+import { formatAge } from './cache.js';
 
 /**
  * Get color for grade
@@ -41,7 +42,11 @@ function getSeverityIcon(severity: 'high' | 'medium' | 'low'): string {
 /**
  * Render JSON report
  */
-export function renderJsonReport(result: AnalysisResult): string {
+export function renderJsonReport(
+  result: AnalysisResult,
+  fromCache = false,
+  cacheAgeSeconds = 0
+): string {
   return JSON.stringify(
     {
       package: {
@@ -68,6 +73,8 @@ export function renderJsonReport(result: AnalysisResult): string {
         approximateSizeMB: result.metrics.approximateSizeMB,
       },
       penalties: result.score.penalties,
+      fromCache,
+      cacheAgeSeconds,
     },
     null,
     2
@@ -77,7 +84,11 @@ export function renderJsonReport(result: AnalysisResult): string {
 /**
  * Render human-friendly text report
  */
-export function renderTextReport(result: AnalysisResult): string {
+export function renderTextReport(
+  result: AnalysisResult,
+  fromCache = false,
+  cacheAgeSeconds = 0
+): string {
   const lines: string[] = [];
   const { package: pkg, score, security, metrics } = result;
 
@@ -87,6 +98,9 @@ export function renderTextReport(result: AnalysisResult): string {
   lines.push(
     chalk.bold(`  ${pkg.name}`) + chalk.gray(`@${pkg.version}`)
   );
+  if (fromCache) {
+    lines.push(chalk.dim(`  (cached ${formatAge(cacheAgeSeconds)} ago)`));
+  }
   if (pkg.description) {
     lines.push(chalk.gray(`  ${pkg.description}`));
   }

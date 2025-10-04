@@ -75,6 +75,8 @@ export interface InstallOptions {
   install?: boolean; // Commander sets this to false when --no-install is used
   failOnGrade?: Grade;
   version?: string;
+  cache?: boolean; // Commander sets this to false when --no-cache is used
+  refresh?: boolean;
 }
 
 // Zod schemas for validation

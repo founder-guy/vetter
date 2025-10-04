@@ -56,6 +56,51 @@ vetter install lodash@4.17.21
 
 # Scoped packages
 vetter install @types/node
+
+# Skip cache (force fresh analysis)
+vetter install lodash --no-cache
+
+# Force re-analysis and update cache
+vetter install lodash --refresh
+```
+
+## Caching
+
+Vetter caches analysis results for **7 days** to speed up repeat scans of the same `package@version`.
+
+### Cache Location
+
+The cache is stored in a platform-specific directory:
+- **Linux/macOS**: `$XDG_CACHE_HOME/vetter` or `~/.cache/vetter`
+- **Windows**: `%LOCALAPPDATA%\vetter`
+- **Custom**: Set `VETTER_CACHE_DIR` environment variable
+
+### Cache Size Management
+
+The cache has a **50MB size limit**. When this limit is exceeded, the oldest cache entries are automatically deleted to stay within the limit.
+
+### Cache Invalidation
+
+The cache is automatically invalidated when:
+- The package is republished (publish date changes)
+- 7 days have elapsed since the analysis
+- The cache schema version changes
+
+### Cache Flags
+
+- `--no-cache`: Skip cache entirely (always run fresh analysis)
+- `--refresh`: Force re-analysis and update the cache
+
+### Manual Cache Management
+
+To clear the cache manually:
+
+```bash
+# Linux/macOS
+rm -rf ~/.cache/vetter
+
+# Windows
+rmdir /s %LOCALAPPDATA%\vetter
 ```
 
 ## Grading System

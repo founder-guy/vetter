@@ -54,6 +54,23 @@ export async function getPackageMetadata(
     const spec = version || 'latest';
     const manifest = pickManifest(packument, spec);
 
+    // Normalize license field (handle legacy object/array formats)
+    let normalizedLicense: string | undefined;
+    if (typeof manifest.license === 'string') {
+      normalizedLicense = manifest.license;
+    } else if (manifest.license && typeof manifest.license === 'object') {
+      // Legacy format: { type: 'MIT', url: '...' }
+      if ('type' in manifest.license) {
+        normalizedLicense = manifest.license.type as string;
+      }
+    } else if (Array.isArray(manifest.licenses)) {
+      // Legacy array format: [{ type: 'MIT' }, { type: 'Apache-2.0' }]
+      const types = manifest.licenses
+        .map((l: any) => (typeof l === 'string' ? l : l?.type))
+        .filter(Boolean);
+      normalizedLicense = types.length > 0 ? types.join(' OR ') : undefined;
+    }
+
     return {
       name: manifest.name,
       version: manifest.version,
@@ -65,6 +82,7 @@ export async function getPackageMetadata(
       devDependencies: manifest.devDependencies || {},
       unpackedSize: manifest.dist?.unpackedSize,
       description: manifest.description,
+      license: normalizedLicense,
     };
   } catch (error: unknown) {
     const isErrorWithCode = (e: unknown): e is { code?: string; statusCode?: number } =>

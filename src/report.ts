@@ -26,6 +26,28 @@ function getGradeColor(grade: string): (text: string) => string {
 }
 
 /**
+ * Get color for license category
+ */
+function getLicenseColor(category: string): (text: string) => string {
+  switch (category) {
+    case 'permissive':
+      return chalk.green;
+    case 'weak-copyleft':
+      return chalk.yellow;
+    case 'strong-copyleft':
+    case 'network-copyleft':
+    case 'proprietary':
+    case 'deprecated':
+    case 'unlicensed':
+      return chalk.red;
+    case 'unknown':
+      return chalk.gray;
+    default:
+      return chalk.white;
+  }
+}
+
+/**
  * Get icon for severity
  */
 function getSeverityIcon(severity: 'high' | 'medium' | 'low'): string {
@@ -59,6 +81,11 @@ export function renderJsonReport(
       security: {
         status: result.security.status,
         vulnerabilities: result.security.vulnerabilities,
+      },
+      license: {
+        raw: result.license.raw,
+        category: result.license.category,
+        normalizedSpdx: result.license.normalizedSpdx,
       },
       metrics: {
         daysSincePublish: result.metrics.daysSincePublish,
@@ -155,6 +182,13 @@ export function renderTextReport(
       `    ${chalk.cyan('💾')} ~${metrics.approximateSizeMB.toFixed(1)} MB unpacked`
     );
   }
+
+  // License info
+  const licenseColor = getLicenseColor(result.license.category);
+  const licenseText = result.license.raw || 'None';
+  lines.push(
+    `    ${chalk.cyan('📄')} License: ${licenseColor(licenseText)}`
+  );
   lines.push('');
 
   // Penalties

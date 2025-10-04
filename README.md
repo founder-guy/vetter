@@ -134,6 +134,16 @@ Vetter starts at grade **A** and applies penalties based on risk factors:
 - **≥50 total dependencies**: -1 grade
 - **≥5 MB unpacked size**: -1 grade
 
+### License Risk
+- **Network copyleft (AGPL)**: -2 grades
+- **Strong copyleft (GPL)**: -2 grades
+- **Weak copyleft (LGPL/MPL/EPL)**: -1 grade
+- **Proprietary/UNLICENSED/SSPL**: -2 grades
+- **Deprecated (JSON, BSD-4-Clause, CC-BY-NC)**: -2 grades
+- **No license specified**: -2 grades
+- **Unknown/unrecognized license**: -1 grade
+- **Permissive (MIT, Apache, BSD-2/3, ISC)**: no penalty
+
 Grades range from **A** (low risk) to **F** (high risk).
 
 ## Example Output
@@ -153,6 +163,7 @@ Grades range from **A** (low risk) to **F** (high risk).
     👥 3 maintainers
     📅 Published 120 days ago
     💾 ~0.2 MB unpacked
+    📄 License: MIT
 
   Risk Factors:
     ⚠ 57 total dependencies (≥50)
@@ -186,11 +197,17 @@ Use `--json` for machine-readable output:
       "total": 0
     }
   },
+  "license": {
+    "raw": "MIT",
+    "category": "permissive",
+    "normalizedSpdx": "MIT"
+  },
   "metrics": {
     "daysSincePublish": 120,
     "maintainerCount": 3,
     "directDependencyCount": 30,
     "totalDependencyCount": 57,
+    "totalDependencyCountStatus": "known",
     "approximateSizeMB": 0.2
   },
   "penalties": [
@@ -242,15 +259,16 @@ src/
 └── services/
     ├── npm.ts          # Package metadata fetching
     ├── security.ts     # npm audit runner
-    └── metrics.ts      # Dependency and staleness metrics
+    ├── metrics.ts      # Dependency and staleness metrics
+    └── license.ts      # License categorization and SPDX parsing
 ```
 
 ## Roadmap
 
 - [ ] GitHub maintainer activity analysis
 - [ ] Suspicious package name detection
-- [ ] License compatibility checks
 - [ ] Alternative registries support
+- [ ] Custom license policy flags (`--allow-license`, `--deny-license`)
 
 ## FAQ
 
@@ -340,15 +358,28 @@ If Vetter can't determine the dependency count (e.g., network failure, registry 
 
 The penalty is conservative—we assume unknown dependencies *could* be a risk, so the grade reflects that uncertainty.
 
-### Why doesn't Vetter show license information?
+### How does Vetter handle license checking?
 
-License compatibility checking is not yet implemented but is on the [roadmap](#roadmap). The metadata is available from the npm registry, and we plan to add warnings for:
+Vetter automatically detects and categorizes package licenses, applying penalties based on legal/compliance risk:
 
-- Non-OSI approved licenses
-- GPL/copyleft licenses in commercial projects
-- Missing license fields
+**License Categories:**
+- **Permissive** (MIT, Apache-2.0, BSD, ISC): No penalty—safe for most use cases
+- **Weak Copyleft** (LGPL, MPL, EPL): -1 grade—requires reciprocal licensing on modifications
+- **Strong Copyleft** (GPL): -2 grades—requires full source disclosure when distributed
+- **Network Copyleft** (AGPL): -2 grades—copyleft triggered by network interaction
+- **Proprietary/UNLICENSED**: -2 grades—legal red flag, no usage rights granted
+- **Deprecated** (JSON, BSD-4-Clause, CC-BY-NC): -2 grades—problematic or policy-violating
+- **No License**: -2 grades—missing license field, unclear usage rights
+- **Unknown**: -1 grade—unrecognized SPDX identifier
 
-This requires careful implementation to avoid false positives, so it's planned for a future release.
+**SPDX Expression Support:**
+Vetter parses SPDX expressions like `MIT OR Apache-2.0`. If any option is permissive, the package is categorized as safe. For `AND` expressions, the worst-case license applies.
+
+**Legacy Format Handling:**
+Vetter normalizes legacy npm license formats (object `{ type: 'MIT' }` or array `[{ type: 'MIT' }]`) into standard SPDX strings.
+
+**Future Plans:**
+Custom license policies (`--allow-license GPL-3.0`, `--deny-license AGPL-3.0`) are planned for a future release.
 
 ## License
 

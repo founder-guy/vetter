@@ -9,6 +9,7 @@ import { dirname, join } from 'path';
 import { parsePackageString, getPackageMetadata } from './services/npm.js';
 import { analyzePackageSecurity } from './services/security.js';
 import { calculateMetrics } from './services/metrics.js';
+import { analyzeLicense } from './services/license.js';
 import { calculateScore } from './scoring.js';
 import { renderTextReport, renderJsonReport, promptInstall } from './report.js';
 import { installPackage } from './install.js';
@@ -149,14 +150,18 @@ program
           throw error;
         }
 
+        // Analyze license
+        const licenseInfo = analyzeLicense(packageSnapshot.license);
+
         // Calculate score
-        const score = calculateScore(securityAnalysis, metrics);
+        const score = calculateScore(securityAnalysis, metrics, licenseInfo);
 
         // Build result
         result = {
           package: packageSnapshot,
           metrics,
           security: securityAnalysis,
+          license: licenseInfo,
           score,
         };
 

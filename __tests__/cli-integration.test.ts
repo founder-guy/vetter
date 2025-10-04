@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { isGradeAtOrBelowThreshold } from '../src/grading.js';
 import { calculateScore } from '../src/scoring.js';
-import type { SecurityAnalysis, PackageMetrics, Grade } from '../src/types.js';
+import type { SecurityAnalysis, PackageMetrics, Grade, LicenseInfo } from '../src/types.js';
 
 describe('CLI --fail-on-grade Integration Logic', () => {
   /**
@@ -10,6 +10,12 @@ describe('CLI --fail-on-grade Integration Logic', () => {
    * 2. Grade is compared against threshold
    * 3. Exit code is determined based on comparison
    */
+
+  const permissiveLicense: LicenseInfo = {
+    raw: 'MIT',
+    category: 'permissive',
+    normalizedSpdx: 'MIT',
+  };
 
   describe('Exit code determination', () => {
     it('should determine exit code 1 when grade fails threshold (equal)', () => {
@@ -25,7 +31,7 @@ describe('CLI --fail-on-grade Integration Logic', () => {
         approximateSizeMB: 0.5,
       };
 
-      const score = calculateScore(security, metrics);
+      const score = calculateScore(security, metrics, permissiveLicense);
       expect(score.grade).toBe('D'); // moderate vuln + stale + 1 maintainer = D (3 penalties)
 
       // CLI logic: if (isGradeAtOrBelowThreshold(score.grade, 'D')) { exit(1) }
@@ -47,7 +53,7 @@ describe('CLI --fail-on-grade Integration Logic', () => {
         approximateSizeMB: 5,
       };
 
-      const score = calculateScore(security, metrics);
+      const score = calculateScore(security, metrics, permissiveLicense);
       expect(score.grade).toBe('F'); // Critical vuln + many penalties = F
 
       // CLI logic: if (isGradeAtOrBelowThreshold(score.grade, 'C')) { exit(1) }
@@ -69,7 +75,7 @@ describe('CLI --fail-on-grade Integration Logic', () => {
         approximateSizeMB: 0.5,
       };
 
-      const score = calculateScore(security, metrics);
+      const score = calculateScore(security, metrics, permissiveLicense);
       expect(score.grade).toBe('A'); // Healthy package
 
       // CLI logic: if (isGradeAtOrBelowThreshold(score.grade, 'C')) { exit(1) }
@@ -111,7 +117,7 @@ describe('CLI --fail-on-grade Integration Logic', () => {
         approximateSizeMB: 0.5,
       };
 
-      const score = calculateScore(security, metrics);
+      const score = calculateScore(security, metrics, permissiveLicense);
       expect(score.grade).toBe('B'); // Stale penalty
 
       const shouldFail = isGradeAtOrBelowThreshold(score.grade, threshold);
@@ -134,7 +140,7 @@ describe('CLI --fail-on-grade Integration Logic', () => {
         approximateSizeMB: 0.5,
       };
 
-      const score = calculateScore(security, metrics);
+      const score = calculateScore(security, metrics, permissiveLicense);
       expect(score.grade).toBe('B'); // 1 penalty (stale 1+ year)
 
       const shouldFail = isGradeAtOrBelowThreshold(score.grade, threshold);

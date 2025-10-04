@@ -11,7 +11,7 @@ export async function installPackage(packageSpec: string): Promise<number> {
     });
 
     npmProcess.on('close', (code) => {
-      resolve(code || 0);
+      resolve(code ?? 1);
     });
 
     npmProcess.on('error', (error) => {

@@ -63,8 +63,9 @@ vetter install @types/node
 Vetter starts at grade **A** and applies penalties based on risk factors:
 
 ### Security
-- **Critical/High vulnerabilities**: -2 grades each
-- **Moderate vulnerabilities**: -1 grade
+- **Has critical vulnerabilities**: -2 grades
+- **Has high vulnerabilities**: -2 grades
+- **Has moderate vulnerabilities**: -1 grade
 
 ### Maintenance
 - **Last published >2 years ago**: -2 grades

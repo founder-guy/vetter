@@ -41,9 +41,10 @@ export async function analyzePackageSecurity(
           timeout: 60000,
         }
       );
-    } catch (installError: any) {
+    } catch (installError: unknown) {
       // Continue even if install partially fails
-      console.warn('Install warning:', installError.message);
+      const message = installError instanceof Error ? installError.message : String(installError);
+      console.warn('Install warning:', message);
     }
 
     // Run npm audit
@@ -75,10 +76,15 @@ export async function analyzePackageSecurity(
         status,
         vulnerabilities,
       };
-    } catch (auditError: any) {
+    } catch (auditError: unknown) {
       // npm audit returns non-zero exit code when vulnerabilities found
       // Try to parse stdout anyway
-      if (auditError.stdout) {
+      if (
+        auditError &&
+        typeof auditError === 'object' &&
+        'stdout' in auditError &&
+        typeof auditError.stdout === 'string'
+      ) {
         try {
           const auditData = JSON.parse(auditError.stdout);
           const parsed = AuditResponseSchema.parse(auditData);
@@ -103,6 +109,7 @@ export async function analyzePackageSecurity(
       }
 
       // Audit failed or unsupported
+      const message = auditError instanceof Error ? auditError.message : String(auditError);
       return {
         status: 'unknown',
         vulnerabilities: {
@@ -113,10 +120,11 @@ export async function analyzePackageSecurity(
           info: 0,
           total: 0,
         },
-        auditError: auditError.message,
+        auditError: message,
       };
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     return {
       status: 'unknown',
       vulnerabilities: {
@@ -127,7 +135,7 @@ export async function analyzePackageSecurity(
         info: 0,
         total: 0,
       },
-      auditError: error.message,
+      auditError: message,
     };
   } finally {
     // Cleanup temp directory

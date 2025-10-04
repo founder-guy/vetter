@@ -4,9 +4,10 @@ declare module 'npm-registry-fetch' {
     [key: string]: unknown;
   }
 
-  function json(url: string, options?: FetchOptions): Promise<unknown>;
+  interface RegistryFetch {
+    json(url: string, options?: FetchOptions): Promise<unknown>;
+  }
 
-  export default {
-    json,
-  };
+  const registryFetch: RegistryFetch;
+  export default registryFetch;
 }

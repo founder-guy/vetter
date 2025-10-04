@@ -112,12 +112,16 @@ Regex for scoped: `/^(@[^/]+\/[^@]+)(?:@(.+))?$/`
 
 ## Testing Strategy
 
-- **Unit tests** in `__tests__/` for pure functions (scoring, parsing)
-- **Manual testing** with real packages:
+- **Unit tests** in `__tests__/` use mocks for deterministic, offline testing:
+  - `scoring.test.ts`: Pure functions (scoring logic, parsing)
+  - `npm.test.ts`: Mocks `npm-registry-fetch` to avoid network calls
+- **Manual testing** with real packages via CLI:
   - Healthy: `tiny-invariant`, `countup.js`
   - Bloated: `express` (68 deps)
   - Vulnerable: `request` (deprecated, has CVEs)
 - **Edge case**: Unknown dependency count (simulate by breaking temp workspace)
+
+**Mocking approach**: Tests use `vi.mock('npm-registry-fetch')` with realistic packument structures. This ensures tests run instantly, work offline, and never flake due to registry issues.
 
 When adding new scoring rules, always add corresponding test in `__tests__/scoring.test.ts`.
 

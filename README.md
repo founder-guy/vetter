@@ -1,5 +1,7 @@
 # Vetter
 
+[![npm](https://img.shields.io/npm/v/vetter)](https://www.npmjs.com/package/vetter)
+
 > Pre-install risk scanner for npm packages
 
 **Vetter** analyzes npm packages before installation, evaluating security vulnerabilities, maintenance status, dependency bloat, and other risk factors. Get an **A–F grade** for any package and make informed decisions about what goes into your `node_modules`.
@@ -71,9 +73,9 @@ Vetter caches analysis results for **7 days** to speed up repeat scans of the sa
 ### Cache Location
 
 The cache is stored in a platform-specific directory:
-- **Linux/macOS**: `$XDG_CACHE_HOME/vetter` or `~/.cache/vetter`
-- **Windows**: `%LOCALAPPDATA%\vetter`
-- **Custom**: Set `VETTER_CACHE_DIR` environment variable
+- **Linux/macOS**: `$XDG_CACHE_HOME/vetter/entries` or `~/.cache/vetter/entries`
+- **Windows**: `%LOCALAPPDATA%\vetter\entries`
+- **Custom**: Set `VETTER_CACHE_DIR`, which will contain an `entries/` subdirectory
 
 ### Cache Size Management
 
@@ -235,7 +237,6 @@ src/
 
 ## Roadmap
 
-- [ ] Result caching in `~/.cache/vetter`
 - [ ] GitHub maintainer activity analysis
 - [ ] Suspicious package name detection
 - [ ] License compatibility checks

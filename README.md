@@ -190,7 +190,6 @@ src/
 
 ## Roadmap
 
-- [ ] `--fail-on-grade` flag for CI pipelines
 - [ ] Result caching in `~/.cache/vetter`
 - [ ] GitHub maintainer activity analysis
 - [ ] Suspicious package name detection
@@ -201,15 +200,26 @@ src/
 
 ### Can I use Vetter in CI/CD pipelines?
 
-**Yes.** Use `--json` mode for structured output and `--no-install` to skip the interactive prompt:
+**Yes.** Use the `--fail-on-grade` flag to enforce risk thresholds:
 
 ```bash
-vetter install lodash --json --no-install
+# Fail CI if package grade is C or worse
+vetter install lodash --fail-on-grade C --no-install
+
+# More lenient: only fail on D or worse
+vetter install express --fail-on-grade D --no-install
+
+# Combine with --json for structured output (exit code still reflects threshold)
+vetter install react --fail-on-grade C --json --no-install
 ```
 
-This outputs machine-readable JSON to stdout with all vulnerability data, metrics, and grade information. You can parse this in your CI scripts to make automated decisions.
+The `--fail-on-grade` flag exits with code 1 if the package grade is **at or below** the threshold (e.g., `--fail-on-grade C` fails on C, D, E, or F). This eliminates the need for shell scripting to parse grades manually.
 
-**Planned feature:** A `--fail-on-grade` flag will allow you to fail CI builds if a package scores below a threshold (e.g., `--fail-on-grade C`). Track progress in the [roadmap](#roadmap).
+**Manual parsing:** You can also use `--json --no-install` for custom logic:
+
+```bash
+vetter install lodash --json --no-install | jq '.grade'
+```
 
 ### Does Vetter install packages automatically?
 

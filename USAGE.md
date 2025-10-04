@@ -42,37 +42,67 @@ vetter install express --json --no-install | jq '.grade'
 
 ## CI/CD Integration
 
-### GitHub Actions Example
-```yaml
-- name: Analyze package risk
-  run: |
-    GRADE=$(npx vetter install ${{ matrix.package }} --json --no-install | jq -r '.grade')
-    echo "Package grade: $GRADE"
-    if [ "$GRADE" = "F" ] || [ "$GRADE" = "E" ]; then
-      echo "Package has high risk!"
-      exit 1
-    fi
+### Using `--fail-on-grade` (Recommended)
+
+The `--fail-on-grade` flag automatically exits with code 1 if a package scores at or below your threshold:
+
+```bash
+# Fail if package is C or worse (fails on C, D, E, F)
+vetter install lodash --fail-on-grade C --no-install
+
+# More lenient: only fail on D or worse
+vetter install express --fail-on-grade D --no-install
+
+# Strict: only accept grade A packages
+vetter install react --fail-on-grade B --no-install
 ```
 
-### Script Usage
+### GitHub Actions Example
+
+```yaml
+- name: Check dependency risk
+  run: npx vetter install ${{ matrix.package }} --fail-on-grade C --no-install
+```
+
+### GitLab CI Example
+
+```yaml
+check_dependencies:
+  script:
+    - npx vetter install lodash --fail-on-grade C --no-install
+  allow_failure: false
+```
+
+### Pre-install Hook
+
 ```bash
 #!/bin/bash
-# Check if package grade is acceptable
+# .git/hooks/pre-commit or package.json script
 
+# Check all packages being added
+for package in "$@"; do
+  echo "Vetting $package..."
+  vetter install "$package" --fail-on-grade D --no-install || exit 1
+done
+```
+
+### Manual JSON Parsing (Alternative)
+
+If you need custom logic beyond simple thresholds:
+
+```bash
+#!/bin/bash
 PACKAGE=$1
 RESULT=$(npx vetter install "$PACKAGE" --json --no-install)
 GRADE=$(echo "$RESULT" | jq -r '.grade')
+VULNS=$(echo "$RESULT" | jq -r '.security.vulnerabilities.total')
 
-case "$GRADE" in
-  A|B|C)
-    echo "✓ Package $PACKAGE has acceptable risk (Grade: $GRADE)"
-    npm install "$PACKAGE"
-    ;;
-  D|E|F)
-    echo "✗ Package $PACKAGE has high risk (Grade: $GRADE)"
-    exit 1
-    ;;
-esac
+if [ "$VULNS" -gt 0 ]; then
+  echo "✗ Package has $VULNS vulnerabilities (Grade: $GRADE)"
+  exit 1
+fi
+
+echo "✓ Package $PACKAGE is safe (Grade: $GRADE)"
 ```
 
 ## Understanding Grades

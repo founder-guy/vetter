@@ -73,6 +73,7 @@ export interface AnalysisResult {
 export interface InstallOptions {
   json?: boolean;
   install?: boolean; // Commander sets this to false when --no-install is used
+  failOnGrade?: Grade;
   version?: string;
 }
 

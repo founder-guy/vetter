@@ -40,6 +40,23 @@ vetter install express --json --no-install
 vetter install express --json --no-install | jq '.grade'
 ```
 
+### Caching
+```bash
+# Normal usage: cache is used automatically (7-day TTL, 50MB limit)
+vetter install lodash --no-install
+
+# Force fresh analysis (skip cache)
+vetter install lodash --no-install --no-cache
+
+# Re-analyze and update cache
+vetter install lodash --no-install --refresh
+```
+
+The cache speeds up repeat scans (from ~10s to <1s) and is automatically managed:
+- **Location**: `~/.cache/vetter` (Linux/macOS) or `%LOCALAPPDATA%\vetter` (Windows)
+- **TTL**: 7 days (auto-invalidates when package is republished)
+- **Size limit**: 50MB (oldest entries auto-deleted)
+
 ## CI/CD Integration
 
 ### Using `--fail-on-grade` (Recommended)
@@ -136,4 +153,6 @@ echo "✓ Package $PACKAGE is safe (Grade: $GRADE)"
 2. **Combine with `--json`** for programmatic access
 3. **Check before major version upgrades** to catch new issues
 4. **Run in CI/CD** to prevent risky packages from entering your project
-5. **Consider context**: A grade C or D package might still be the right choice if it's well-established (like webpack)
+5. **Cache is automatic**: Repeat scans are instant (use `--no-cache` to force fresh analysis)
+6. **Use `--refresh`** to update outdated cache entries
+7. **Consider context**: A grade C or D package might still be the right choice if it's well-established (like webpack)

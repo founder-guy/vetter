@@ -278,9 +278,13 @@ async function pruneIfOversized(): Promise<void> {
         break;
       }
 
-      await fs.unlink(file.path).catch(() => {});
-      currentSize -= file.size;
-      deletedCount++;
+      try {
+        await fs.unlink(file.path);
+        currentSize -= file.size;
+        deletedCount++;
+      } catch {
+        // Skip file if unlink fails (locked, permission issue, etc.)
+      }
     }
 
     if (deletedCount > 0) {

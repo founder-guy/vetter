@@ -1,5 +1,8 @@
-import pacote from 'pacote';
+import registryFetch from 'npm-registry-fetch';
+import pickManifest, { type Packument } from 'npm-pick-manifest';
 import type { PackageSnapshot, PackageIdentifier } from '../types.js';
+
+type Maintainer = string | { name?: string; email?: string };
 
 /**
  * Parse package string into name and version
@@ -39,31 +42,44 @@ export async function getPackageMetadata(
   version?: string
 ): Promise<PackageSnapshot> {
   try {
-    const spec = version ? `${name}@${version}` : name;
-    const manifest = await pacote.manifest(spec, {
-      fullMetadata: true,
+    // Encode package name for URL, preserving / in scoped packages
+    const encodedName = encodeURIComponent(name).replace('%2F', '/');
+
+    // Fetch full packument (all versions metadata)
+    const packument = (await registryFetch.json(`/${encodedName}`, {
       preferOnline: true,
-    });
+    })) as Packument;
+
+    // Resolve version/tag/semver range to specific version
+    const spec = version || 'latest';
+    const manifest = pickManifest(packument, spec);
 
     return {
       name: manifest.name,
       version: manifest.version,
-      publishedAt: new Date(manifest.time?.[manifest.version] || Date.now()),
-      maintainers: (manifest.maintainers || []).map((m: any) =>
-        typeof m === 'string' ? m : m.name || m.email
+      publishedAt: new Date(packument.time?.[manifest.version] || Date.now()),
+      maintainers: (manifest.maintainers || []).map((m: Maintainer) =>
+        typeof m === 'string' ? m : m.name || m.email || 'unknown'
       ),
       dependencies: manifest.dependencies || {},
       devDependencies: manifest.devDependencies || {},
       unpackedSize: manifest.dist?.unpackedSize,
       description: manifest.description,
     };
-  } catch (error: any) {
-    if (error.code === 'E404') {
-      throw new Error(`Package not found: ${name}`);
+  } catch (error: unknown) {
+    const isErrorWithCode = (e: unknown): e is { code?: string; statusCode?: number } =>
+      typeof e === 'object' && e !== null;
+
+    if (isErrorWithCode(error)) {
+      if (error.statusCode === 404 || error.code === 'E404') {
+        throw new Error(`Package not found: ${name}`);
+      }
+      if (error.code === 'ENOTFOUND' || error.code === 'EAI_AGAIN') {
+        throw new Error('Cannot reach npm registry. Check your internet connection.');
+      }
     }
-    if (error.code === 'ENOTFOUND' || error.code === 'EAI_AGAIN') {
-      throw new Error('Cannot reach npm registry. Check your internet connection.');
-    }
-    throw new Error(`Failed to fetch package metadata: ${error.message}`);
+
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to fetch package metadata: ${message}`);
   }
 }

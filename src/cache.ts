@@ -103,6 +103,10 @@ function validateEntry(entry: CacheEntry, publishedAt: string): boolean {
 
   // Check TTL
   const cachedAtTime = Date.parse(entry.cachedAt);
+  if (Number.isNaN(cachedAtTime)) {
+    return false;
+  }
+
   const now = Date.now();
   const ageSeconds = (now - cachedAtTime) / 1000;
 

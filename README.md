@@ -1,8 +1,8 @@
-# vetter
+# Vetter
 
 > Pre-install risk scanner for npm packages
 
-**vetter** analyzes npm packages before installation, evaluating security vulnerabilities, maintenance status, dependency bloat, and other risk factors. Get an **A–F grade** for any package and make informed decisions about what goes into your `node_modules`.
+**Vetter** analyzes npm packages before installation, evaluating security vulnerabilities, maintenance status, dependency bloat, and other risk factors. Get an **A–F grade** for any package and make informed decisions about what goes into your `node_modules`.
 
 ## Features
 
@@ -60,7 +60,7 @@ vetter install @types/node
 
 ## Grading System
 
-vetter starts at grade **A** and applies penalties based on risk factors:
+Vetter starts at grade **A** and applies penalties based on risk factors:
 
 ### Security
 - **Critical/High vulnerabilities**: -2 grades each
@@ -195,6 +195,93 @@ src/
 - [ ] Suspicious package name detection
 - [ ] License compatibility checks
 - [ ] Alternative registries support
+
+## FAQ
+
+### Can I use Vetter in CI/CD pipelines?
+
+**Yes.** Use `--json` mode for structured output and `--no-install` to skip the interactive prompt:
+
+```bash
+vetter install lodash --json --no-install
+```
+
+This outputs machine-readable JSON to stdout with all vulnerability data, metrics, and grade information. You can parse this in your CI scripts to make automated decisions.
+
+**Planned feature:** A `--fail-on-grade` flag will allow you to fail CI builds if a package scores below a threshold (e.g., `--fail-on-grade C`). Track progress in the [roadmap](#roadmap).
+
+### Does Vetter install packages automatically?
+
+**No, not without your confirmation.** After displaying the risk report, Vetter prompts:
+
+```
+Proceed with install? [y/N]
+```
+
+If you press `y`, Vetter proxies to `npm install <package>` in your current directory. If you press `n` (or anything else), it exits without installing.
+
+Use `--no-install` to skip this prompt entirely and only perform the analysis.
+
+### Does Vetter count devDependencies when scanning packages?
+
+**No, not by default.** When you run `vetter install <package>`, it creates a temporary workspace and runs `npm install --package-lock-only <package>`, which only installs runtime dependencies. The dependency count reflects what will actually end up in your `node_modules` when you install the package.
+
+**Exception:** If you run Vetter on a local directory with a `package.json`, it will analyze whatever dependencies are present in that environment, including devDependencies if they've been installed.
+
+### Why does the security scan take so long for some packages?
+
+Vetter runs `npm audit` in an isolated temporary workspace to get accurate vulnerability data. For packages with large dependency trees (50+ transitive dependencies), this can take 30-60 seconds because:
+
+1. npm must resolve the entire dependency tree
+2. npm queries the registry's security database for every package
+3. The audit runs in a fresh environment without cached data
+
+This is a fundamental limitation of npm's audit mechanism. Vetter shows a spinner during this process so you know it's working.
+
+### Why does Vetter give itself different grades depending on where I run it?
+
+When you run `npx vetter install vetter`, you're scanning the **published npm package**, which only includes runtime dependencies (commander, ora, chalk, npm-registry-fetch, npm-pick-manifest, zod). This typically results in a **B or C grade** with ~15-20 total dependencies.
+
+When you run Vetter **inside the cloned repository** (e.g., `node bin/vetter install vetter`), it scans the local development environment, which includes **devDependencies** like TypeScript, Vitest, ESLint, tsup, and their transitive dependencies. This results in a **D grade** with 100+ total dependencies.
+
+**This is intentional and correct.** Vetter shows you what you'll *actually install* in your project. The published package is lean; the development environment is heavier. This distinction applies to any package with a significant devDependency footprint.
+
+### Why does Vetter penalize packages with ≤1 maintainer?
+
+Single-maintainer packages are at higher risk of:
+- **Abandonment** - If the maintainer loses interest or capacity, the package becomes unmaintained
+- **Bus factor** - No redundancy if the maintainer is unavailable
+- **Security response** - Slower patching if only one person can publish updates
+
+This doesn't mean single-maintainer packages are bad—many excellent libraries are maintained by one person. It's simply a risk factor to be aware of when choosing dependencies. The penalty is only -1 grade, and you can still install packages with this warning.
+
+### Can Vetter scan private/scoped packages from custom registries?
+
+Currently, Vetter uses npm's default registry (`https://registry.npmjs.org`). It **can** scan scoped packages like `@babel/core` or `@types/node` as long as they're public.
+
+**Planned feature:** Support for alternative registries (e.g., GitHub Package Registry, private npm registries) by respecting `.npmrc` configuration. Track progress in the [roadmap](#roadmap).
+
+### What happens if dependency counting fails?
+
+If Vetter can't determine the dependency count (e.g., network failure, registry timeout, or malformed package), it:
+
+1. Sets `totalDependencyCount: -1` internally (distinct from 0 dependencies)
+2. Applies a **-1 grade penalty** for unknown risk
+3. Displays "Dependency count unavailable" in text reports
+4. Outputs `totalDependencyCount: null` and `totalDependencyCountStatus: "unknown"` in JSON mode
+5. Logs a warning to stderr in JSON mode (so stdout remains valid JSON)
+
+The penalty is conservative—we assume unknown dependencies *could* be a risk, so the grade reflects that uncertainty.
+
+### Why doesn't Vetter show license information?
+
+License compatibility checking is not yet implemented but is on the [roadmap](#roadmap). The metadata is available from the npm registry, and we plan to add warnings for:
+
+- Non-OSI approved licenses
+- GPL/copyleft licenses in commercial projects
+- Missing license fields
+
+This requires careful implementation to avoid false positives, so it's planned for a future release.
 
 ## License
 

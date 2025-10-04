@@ -13,6 +13,7 @@ import { calculateScore } from './scoring.js';
 import { renderTextReport, renderJsonReport, promptInstall } from './report.js';
 import { installPackage } from './install.js';
 import type { AnalysisResult, InstallOptions } from './types.js';
+import { isGradeAtOrBelowThreshold, isValidGrade } from './grading.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -32,7 +33,17 @@ program
   .description('Analyze and optionally install an npm package')
   .option('--json', 'Output results as JSON')
   .option('--no-install', 'Skip installation prompt')
+  .option('--fail-on-grade <grade>', 'Exit with code 1 if package grade is at or below threshold (A-F)')
   .action(async (packageString: string, options: InstallOptions) => {
+    // Validate --fail-on-grade option
+    if (options.failOnGrade) {
+      const normalizedGrade = options.failOnGrade.toUpperCase();
+      if (!isValidGrade(normalizedGrade)) {
+        console.error(chalk.red(`\nError: Invalid grade "${options.failOnGrade}". Must be A, B, C, D, E, or F.\n`));
+        process.exit(1);
+      }
+      options.failOnGrade = normalizedGrade;
+    }
     try {
       // Parse package identifier
       const { name, version } = parsePackageString(packageString);
@@ -134,6 +145,29 @@ program
         console.log(renderJsonReport(result));
       } else {
         console.log(renderTextReport(result));
+      }
+
+      // Check grade threshold if --fail-on-grade is set
+      if (options.failOnGrade) {
+        if (isGradeAtOrBelowThreshold(score.grade, options.failOnGrade)) {
+          // Grade failed threshold - exit immediately with code 1
+          if (!options.json) {
+            console.log(
+              chalk.red(
+                `\n✗ Package grade ${score.grade} fails threshold ${options.failOnGrade}\n`
+              )
+            );
+          }
+          process.exit(1);
+        }
+        // Grade passed threshold - continue normally
+        if (!options.json) {
+          console.log(
+            chalk.green(
+              `\n✓ Package grade ${score.grade} passes threshold ${options.failOnGrade}\n`
+            )
+          );
+        }
       }
 
       // Installation prompt

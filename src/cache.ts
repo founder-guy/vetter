@@ -306,7 +306,7 @@ export async function clearCache(): Promise<void> {
     const files = await fs.readdir(cacheDir);
     await Promise.all(
       files
-        .filter((f) => f.endsWith('.json'))
+        .filter((f) => f.endsWith('.json') || f.endsWith('.tmp'))
         .map((f) => fs.unlink(join(cacheDir, f)).catch(() => {}))
     );
   } catch (error) {

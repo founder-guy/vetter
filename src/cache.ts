@@ -318,6 +318,36 @@ export async function clearCache(): Promise<void> {
 }
 
 /**
+ * Gets cache information (location, size, entry count).
+ */
+export async function getCacheInfo(): Promise<{
+  path: string;
+  sizeMB: number;
+  count: number;
+}> {
+  const cacheDir = getCacheDir();
+  const sizeBytes = await getCacheSize();
+
+  try {
+    const files = await fs.readdir(cacheDir);
+    const count = files.filter((f) => f.endsWith('.json')).length;
+
+    return {
+      path: cacheDir,
+      sizeMB: parseFloat((sizeBytes / (1024 * 1024)).toFixed(2)),
+      count,
+    };
+  } catch (error) {
+    // If directory doesn't exist or can't be read, return zero values
+    return {
+      path: cacheDir,
+      sizeMB: 0,
+      count: 0,
+    };
+  }
+}
+
+/**
  * Formats a duration in seconds to a human-readable string.
  */
 export function formatAge(seconds: number): string {

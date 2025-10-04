@@ -50,12 +50,20 @@ vetter install lodash --no-install --no-cache
 
 # Re-analyze and update cache
 vetter install lodash --no-install --refresh
+
+# View cache information
+vetter cache info
+
+# Clear all cached entries
+vetter cache clear
 ```
 
 The cache speeds up repeat scans (from ~10s to <1s) and is automatically managed:
 - **Location**: `~/.cache/vetter` (Linux/macOS) or `%LOCALAPPDATA%\vetter` (Windows)
 - **TTL**: 7 days (auto-invalidates when package is republished)
 - **Size limit**: 50MB (oldest entries auto-deleted)
+
+Use `vetter cache info` to see cache size and location, or `vetter cache clear` to free up disk space.
 
 ## CI/CD Integration
 

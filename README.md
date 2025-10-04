@@ -95,7 +95,17 @@ The cache is automatically invalidated when:
 
 ### Manual Cache Management
 
-To clear the cache manually:
+Use the `vetter cache` command to manage the cache:
+
+```bash
+# View cache information (location, size, entry count)
+vetter cache info
+
+# Clear all cached entries
+vetter cache clear
+```
+
+Or manually delete the cache directory:
 
 ```bash
 # Linux/macOS

@@ -14,7 +14,7 @@ import { renderTextReport, renderJsonReport, promptInstall } from './report.js';
 import { installPackage } from './install.js';
 import type { AnalysisResult, InstallOptions } from './types.js';
 import { isGradeAtOrBelowThreshold, isValidGrade } from './grading.js';
-import { loadCache, saveCache, formatAge } from './cache.js';
+import { loadCache, saveCache, formatAge, clearCache, getCacheInfo } from './cache.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -232,6 +232,32 @@ program
         }
       } else {
         process.exit(0);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(chalk.red(`\nError: ${message}\n`));
+      process.exit(1);
+    }
+  });
+
+program
+  .command('cache <action>')
+  .description('Manage analysis cache')
+  .action(async (action: string) => {
+    try {
+      if (action === 'clear') {
+        await clearCache();
+        console.log(chalk.green('Cache cleared'));
+      } else if (action === 'info') {
+        const info = await getCacheInfo();
+        console.log(chalk.bold('\nCache Information:'));
+        console.log(`  Location: ${chalk.cyan(info.path)}`);
+        console.log(`  Size: ${chalk.yellow(`${info.sizeMB} MB`)}`);
+        console.log(`  Entries: ${chalk.yellow(info.count.toString())}`);
+      } else {
+        console.error(chalk.red(`\nUnknown action: ${action}\n`));
+        console.log('Usage: vetter cache <clear|info>');
+        process.exit(1);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

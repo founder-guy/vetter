@@ -107,6 +107,11 @@ function validateEntry(entry: CacheEntry, publishedAt: string): boolean {
     return false;
   }
 
+  // Validate TTL is a finite positive number
+  if (typeof entry.ttl !== 'number' || !Number.isFinite(entry.ttl) || entry.ttl <= 0) {
+    return false;
+  }
+
   const now = Date.now();
   const ageSeconds = (now - cachedAtTime) / 1000;
 

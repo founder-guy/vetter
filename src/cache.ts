@@ -186,8 +186,9 @@ export async function saveCache(
     const serialized = JSON.stringify(entry);
 
     // Log warning if entry is large
-    if (serialized.length > SIZE_WARNING_THRESHOLD) {
-      console.error(`[vetter] Warning: Cache entry for ${packageName}@${version} is ${Math.round(serialized.length / 1024)}KB`);
+    const byteSize = Buffer.byteLength(serialized, 'utf-8');
+    if (byteSize > SIZE_WARNING_THRESHOLD) {
+      console.error(`[vetter] Warning: Cache entry for ${packageName}@${version} is ${Math.round(byteSize / 1024)}KB`);
     }
 
     const cachePath = getCachePath(packageName, version);

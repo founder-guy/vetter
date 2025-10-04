@@ -5,7 +5,7 @@ import { homedir, tmpdir } from 'os';
 import type { AnalysisResult } from './types.js';
 
 // Constants
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2; // Bumped for license field addition
 const DEFAULT_TTL = 604800; // 7 days in seconds
 const SIZE_WARNING_THRESHOLD = 1024 * 1024; // 1MB
 const MAX_CACHE_SIZE = 50 * 1024 * 1024; // 50MB

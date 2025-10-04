@@ -27,6 +27,24 @@ export interface SecurityAnalysis {
   auditError?: string;
 }
 
+// License category classification
+export type LicenseCategory =
+  | 'permissive'
+  | 'weak-copyleft'
+  | 'strong-copyleft'
+  | 'network-copyleft'
+  | 'proprietary'
+  | 'deprecated'
+  | 'unlicensed'
+  | 'unknown';
+
+// License analysis result
+export interface LicenseInfo {
+  raw?: string;
+  category: LicenseCategory;
+  normalizedSpdx?: string;
+}
+
 // Package snapshot from registry
 export interface PackageSnapshot {
   name: string;
@@ -37,6 +55,7 @@ export interface PackageSnapshot {
   devDependencies: Record<string, string>;
   unpackedSize?: number;
   description?: string;
+  license?: string;
 }
 
 // Metrics derived from package data
@@ -66,6 +85,7 @@ export interface AnalysisResult {
   package: PackageSnapshot;
   metrics: PackageMetrics;
   security: SecurityAnalysis;
+  license: LicenseInfo;
   score: ScoreResult;
 }
 

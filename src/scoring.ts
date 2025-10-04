@@ -4,6 +4,7 @@ import type {
   Penalty,
   SecurityAnalysis,
   PackageMetrics,
+  LicenseInfo,
 } from './types.js';
 
 const GRADES: Grade[] = ['A', 'B', 'C', 'D', 'E', 'F'];
@@ -22,7 +23,8 @@ function scoreToGrade(score: number): Grade {
  */
 export function calculateScore(
   security: SecurityAnalysis,
-  metrics: PackageMetrics
+  metrics: PackageMetrics,
+  license: LicenseInfo
 ): ScoreResult {
   const penalties: Penalty[] = [];
   let totalDeduction = 0;
@@ -129,6 +131,83 @@ export function calculateScore(
       gradeDeduction: deduction,
     });
     totalDeduction += deduction;
+  }
+
+  // License risk
+  switch (license.category) {
+    case 'network-copyleft': {
+      const deduction = 2;
+      penalties.push({
+        reason: `License ${license.raw} (network copyleft - AGPL)`,
+        severity: 'high',
+        gradeDeduction: deduction,
+      });
+      totalDeduction += deduction;
+      break;
+    }
+    case 'strong-copyleft': {
+      const deduction = 2;
+      penalties.push({
+        reason: `License ${license.raw} (strong copyleft - GPL)`,
+        severity: 'high',
+        gradeDeduction: deduction,
+      });
+      totalDeduction += deduction;
+      break;
+    }
+    case 'weak-copyleft': {
+      const deduction = 1;
+      penalties.push({
+        reason: `License ${license.raw} (weak copyleft - LGPL/MPL/EPL)`,
+        severity: 'medium',
+        gradeDeduction: deduction,
+      });
+      totalDeduction += deduction;
+      break;
+    }
+    case 'proprietary': {
+      const deduction = 2;
+      penalties.push({
+        reason: `License ${license.raw || 'proprietary'} (proprietary/restricted)`,
+        severity: 'high',
+        gradeDeduction: deduction,
+      });
+      totalDeduction += deduction;
+      break;
+    }
+    case 'deprecated': {
+      const deduction = 2;
+      penalties.push({
+        reason: `License ${license.raw} (deprecated/problematic)`,
+        severity: 'high',
+        gradeDeduction: deduction,
+      });
+      totalDeduction += deduction;
+      break;
+    }
+    case 'unlicensed': {
+      const deduction = 2;
+      penalties.push({
+        reason: 'No license specified',
+        severity: 'high',
+        gradeDeduction: deduction,
+      });
+      totalDeduction += deduction;
+      break;
+    }
+    case 'unknown': {
+      const deduction = 1;
+      penalties.push({
+        reason: `License ${license.raw} (unknown/unrecognized)`,
+        severity: 'medium',
+        gradeDeduction: deduction,
+      });
+      totalDeduction += deduction;
+      break;
+    }
+    case 'permissive':
+      // No penalty for permissive licenses
+      break;
   }
 
   // Calculate final score (0 = A, 20 = B, 40 = C, etc.)

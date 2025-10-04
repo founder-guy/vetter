@@ -114,8 +114,36 @@ The scoring is penalty-based, starting at grade A (0 points):
 | ≥50 total dependencies | -1 grade |
 | ≥5 MB unpacked | -1 grade |
 | Unknown dependency count | -1 grade |
+| Network/strong copyleft (AGPL/GPL) | -2 grades |
+| Weak copyleft (LGPL/MPL/EPL) | -1 grade |
+| Proprietary/UNLICENSED | -2 grades |
+| Deprecated license (JSON, BSD-4-Clause, CC-BY-NC) | -2 grades |
+| No license specified | -2 grades |
+| Unknown license | -1 grade |
 
 Grades: `A (0-19) → B (20-39) → C (40-59) → D (60-79) → E (80-99) → F (100+)`
+
+### License Categorization ([src/services/license.ts](src/services/license.ts))
+
+**Categories:**
+- **Permissive**: MIT, Apache-2.0, BSD-2/3-Clause, ISC, Unlicense (no penalty)
+- **Weak Copyleft**: LGPL, MPL, EPL, CDDL (requires reciprocal licensing on modifications)
+- **Proprietary/Restricted**: UNLICENSED, SSPL, "SEE LICENSE IN ..." (no redistribution/hosting rights)
+- **Strong Copyleft**: GPL-2.0, GPL-3.0 (requires full source disclosure)
+- **Network Copyleft**: AGPL (copyleft triggered by network interaction)
+- **Proprietary**: UNLICENSED, "SEE LICENSE IN ..." (legal red flag)
+- **Deprecated**: JSON, BSD-4-Clause, Creative Commons NC/SA variants (policy violations)
+- **Unlicensed**: Missing or empty license field
+- **Unknown**: Unrecognized SPDX identifiers
+
+**SPDX Expression Parsing:**
+- `MIT OR Apache-2.0`: Categorized as permissive (best-case applies if any branch is safe)
+- `GPL-3.0 AND LGPL-3.0`: Categorized as strong-copyleft (worst-case applies for AND)
+- Simple string matching for OR/AND operators (no external SPDX parser needed)
+
+**Legacy Format Normalization** ([src/services/npm.ts](src/services/npm.ts#L57)):
+- Object format: `{ type: 'MIT', url: '...' }` → `'MIT'`
+- Array format: `[{ type: 'MIT' }, { type: 'Apache-2.0' }]` → `'MIT OR Apache-2.0'`
 
 ## Critical Implementation Details
 

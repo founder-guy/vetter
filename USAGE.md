@@ -155,6 +155,11 @@ echo "✓ Package $PACKAGE is safe (Grade: $GRADE)"
 - **Dependency count**: More dependencies = larger attack surface and installation time
 - **Package size**: Large packages increase deployment size and installation time
 
+### License Risk
+- **Copyleft licenses**: GPL/AGPL require source disclosure; LGPL/MPL require reciprocal licensing
+- **Proprietary/unlicensed**: Missing or restricted licenses create legal uncertainty
+- **Deprecated**: Outdated licenses (JSON, BSD-4-Clause, CC-BY-NC) violate common policies
+
 ## Tips
 
 1. **Use `--no-install`** when you just want to check a package

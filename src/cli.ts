@@ -10,6 +10,7 @@ import { parsePackageString, getPackageMetadata } from './services/npm.js';
 import { analyzePackageSecurity } from './services/security.js';
 import { calculateMetrics } from './services/metrics.js';
 import { analyzeLicense } from './services/license.js';
+import { analyzeDependencyBreakdown } from './services/breakdown.js';
 import { calculateScore } from './scoring.js';
 import { renderTextReport, renderJsonReport, promptInstall } from './report.js';
 import { installPackage } from './install.js';
@@ -39,6 +40,7 @@ program
   .option('--no-cache', 'Skip cache read/write')
   .option('--refresh', 'Force re-analysis and update cache')
   .option('--fail-on-grade <grade>', 'Exit with code 1 if package grade is at or below threshold (A-F)')
+  .option('--deps', 'Show detailed dependency breakdown (top 10 by sub-tree size)')
   .action(async (packageString: string, options: InstallOptions) => {
     // Validate --fail-on-grade option
     if (options.failOnGrade) {
@@ -174,6 +176,12 @@ program
           // Analyze license
           const licenseInfo = analyzeLicense(packageSnapshot.license);
 
+          // Compute dependency breakdown (always computed for caching, even without --deps flag)
+          // Performance: ~10ms for typical packages, amortized across cache TTL
+          const dependencyBreakdown = workspace?.lockfile
+            ? analyzeDependencyBreakdown(workspace.lockfile, packageSnapshot.name)
+            : undefined;
+
           // Calculate score
           const score = calculateScore(securityAnalysis, metrics, licenseInfo);
 
@@ -184,6 +192,7 @@ program
             security: securityAnalysis,
             license: licenseInfo,
             score,
+            dependencyBreakdown,
           };
 
           // Save to cache (unless --no-cache)
@@ -219,9 +228,9 @@ program
 
       // Render report
       if (options.json) {
-        console.log(renderJsonReport(result, fromCache, cacheAgeSeconds));
+        console.log(renderJsonReport(result, fromCache, cacheAgeSeconds, { showDeps: !!options.deps }));
       } else {
-        console.log(renderTextReport(result, fromCache, cacheAgeSeconds));
+        console.log(renderTextReport(result, fromCache, cacheAgeSeconds, { showDeps: !!options.deps }));
       }
 
       // Check grade threshold if --fail-on-grade is set

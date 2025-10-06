@@ -11,6 +11,10 @@ const execFileAsync = promisify(execFile);
  * Count total transitive dependencies from package-lock.json
  * Returns -1 if counting fails (to distinguish from 0 dependencies)
  *
+ * **Limitation**: Fallback workspace (line 39-87) creates its own temp directory
+ * but does not surface the parsed lockfile. Dependency count may succeed while
+ * dependencyBreakdown remains unavailable. Use shared workspace to avoid this.
+ *
  * @param packageName - Package name
  * @param version - Package version
  * @param lockfile - Optional pre-parsed lockfile (from shared workspace)

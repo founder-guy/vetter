@@ -67,7 +67,8 @@ function getSeverityIcon(severity: 'high' | 'medium' | 'low'): string {
 export function renderJsonReport(
   result: AnalysisResult,
   fromCache = false,
-  cacheAgeSeconds = 0
+  cacheAgeSeconds = 0,
+  options: { showDeps?: boolean } = {}
 ): string {
   return JSON.stringify(
     {
@@ -102,6 +103,10 @@ export function renderJsonReport(
       penalties: result.score.penalties,
       fromCache,
       cacheAgeSeconds,
+      // Only include breakdown if --deps flag is set AND data is available
+      ...(options.showDeps && result.dependencyBreakdown
+        ? { dependencyBreakdown: result.dependencyBreakdown }
+        : {}),
     },
     null,
     2
@@ -114,7 +119,8 @@ export function renderJsonReport(
 export function renderTextReport(
   result: AnalysisResult,
   fromCache = false,
-  cacheAgeSeconds = 0
+  cacheAgeSeconds = 0,
+  options: { showDeps?: boolean } = {}
 ): string {
   const lines: string[] = [];
   const { package: pkg, score, security, metrics } = result;
@@ -190,6 +196,27 @@ export function renderTextReport(
     `    ${chalk.cyan('📄')} License: ${licenseColor(licenseText)}`
   );
   lines.push('');
+
+  // Dependency breakdown (if --deps flag is set)
+  if (options.showDeps) {
+    if (result.dependencyBreakdown && result.dependencyBreakdown.length > 0) {
+      lines.push(chalk.bold('  Top Dependencies (by sub-tree size):'));
+      result.dependencyBreakdown.forEach((dep, i) => {
+        lines.push(
+          `    ${chalk.gray(`${i + 1}.`)} ${dep.name}@${dep.version} ${chalk.cyan(`→ ${dep.transitiveCount} transitive deps`)}`
+        );
+      });
+      lines.push('');
+    } else if (result.dependencyBreakdown !== undefined) {
+      // Lockfile exists but no direct dependencies found
+      lines.push(chalk.gray('  No direct dependencies found'));
+      lines.push('');
+    } else {
+      // Lockfile unavailable
+      lines.push(chalk.yellow('  Dependency breakdown unavailable (lockfile parsing failed)'));
+      lines.push('');
+    }
+  }
 
   // Penalties
   if (score.penalties.length > 0) {

@@ -82,7 +82,9 @@ describe('Cache Integration with Services', () => {
         package: metadata,
         metrics: await calculateMetrics(metadata),
         security: await analyzePackageSecurity('test-package', '1.0.0'),
+        license: { raw: 'MIT', category: 'permissive' as const, normalizedSpdx: 'MIT' },
         score: { grade: 'A' as const, score: 0, penalties: [] },
+        dependencyBreakdown: undefined,
       };
 
       await saveCache(
@@ -122,7 +124,9 @@ describe('Cache Integration with Services', () => {
         package: metadata,
         metrics: await calculateMetrics(metadata),
         security: await analyzePackageSecurity('test-package', '1.0.0'),
+        license: { raw: 'MIT', category: 'permissive' as const, normalizedSpdx: 'MIT' },
         score: { grade: 'A' as const, score: 0, penalties: [] },
+        dependencyBreakdown: undefined,
       };
 
       // With --no-cache, should NOT save
@@ -157,7 +161,9 @@ describe('Cache Integration with Services', () => {
         package: metadata,
         metrics: { ...await calculateMetrics(metadata), totalDependencyCount: 999 },
         security: await analyzePackageSecurity('test-package', '1.0.0'),
+        license: { raw: 'MIT', category: 'permissive' as const, normalizedSpdx: 'MIT' },
         score: { grade: 'F' as const, score: 100, penalties: [] },
+        dependencyBreakdown: undefined,
       };
 
       await saveCache(
@@ -184,7 +190,9 @@ describe('Cache Integration with Services', () => {
           package: metadata,
           metrics: await calculateMetrics(metadata),
           security: await analyzePackageSecurity('test-package', '1.0.0'),
+          license: { raw: 'MIT', category: 'permissive' as const, normalizedSpdx: 'MIT' },
           score: { grade: 'A' as const, score: 0, penalties: [] },
+          dependencyBreakdown: undefined,
         };
 
         // Save updated result
@@ -214,7 +222,9 @@ describe('Cache Integration with Services', () => {
         package: metadata,
         metrics: await calculateMetrics(metadata),
         security: await analyzePackageSecurity('test-package', '1.0.0'),
+        license: { raw: 'MIT', category: 'permissive' as const, normalizedSpdx: 'MIT' },
         score: { grade: 'A' as const, score: 0, penalties: [] },
+        dependencyBreakdown: undefined,
       };
 
       // First run: save to cache
@@ -251,7 +261,9 @@ describe('Cache Integration with Services', () => {
         package: metadata,
         metrics: await calculateMetrics(metadata),
         security: await analyzePackageSecurity('test-package', '1.0.0'),
+        license: { raw: 'MIT', category: 'permissive' as const, normalizedSpdx: 'MIT' },
         score: { grade: 'A' as const, score: 0, penalties: [] },
+        dependencyBreakdown: undefined,
       };
 
       // First save
@@ -273,7 +285,9 @@ describe('Cache Integration with Services', () => {
       // Update with new analysis
       const modifiedAnalysis = {
         ...mockAnalysis,
+        license: { raw: 'MIT', category: 'permissive' as const, normalizedSpdx: 'MIT' },
         score: { grade: 'B' as const, score: 25, penalties: [] },
+        dependencyBreakdown: undefined,
       };
 
       await saveCache(

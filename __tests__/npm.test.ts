@@ -41,6 +41,27 @@ describe('parsePackageString', () => {
     const result = parsePackageString('@babel/core@next');
     expect(result).toEqual({ name: '@babel/core', version: 'next' });
   });
+
+  it('should reject empty string', () => {
+    expect(() => parsePackageString('')).toThrow('Invalid package identifier: ""');
+  });
+
+  it('should reject whitespace-only string', () => {
+    expect(() => parsePackageString('   ')).toThrow('Invalid package identifier');
+  });
+
+  it('should reject single @ symbol', () => {
+    expect(() => parsePackageString('@')).toThrow('Invalid package identifier: "@"');
+  });
+
+  it('should reject @ with version only', () => {
+    expect(() => parsePackageString('@1.0.0')).toThrow('Invalid package identifier: "@1.0.0"');
+  });
+
+  it('should handle whitespace in valid package names', () => {
+    const result = parsePackageString('  lodash  ');
+    expect(result).toEqual({ name: 'lodash', version: undefined });
+  });
 });
 
 describe('getPackageMetadata', () => {

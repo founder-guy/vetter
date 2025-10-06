@@ -12,10 +12,17 @@ interface LegacyLicense {
 /**
  * Parse package string into name and version
  * Supports: pkg, @scope/pkg, pkg@1.0.0, @scope/pkg@1.0.0
+ * @throws {Error} If package identifier is invalid (empty or malformed)
  */
 export function parsePackageString(input: string): PackageIdentifier {
+  // Validate input is not empty or whitespace-only
+  const trimmedInput = input.trim();
+  if (!trimmedInput) {
+    throw new Error(`Invalid package identifier: "${input}"`);
+  }
+
   // Handle scoped packages
-  const scopeMatch = input.match(/^(@[^/]+\/[^@]+)(?:@(.+))?$/);
+  const scopeMatch = trimmedInput.match(/^(@[^/]+\/[^@]+)(?:@(.+))?$/);
   if (scopeMatch) {
     return {
       name: scopeMatch[1],
@@ -24,7 +31,7 @@ export function parsePackageString(input: string): PackageIdentifier {
   }
 
   // Handle non-scoped packages
-  const parts = input.split('@');
+  const parts = trimmedInput.split('@');
   if (parts.length === 1) {
     return { name: parts[0] };
   }
@@ -32,6 +39,11 @@ export function parsePackageString(input: string): PackageIdentifier {
   // Join all but last part (in case name has @)
   const version = parts.pop();
   const name = parts.join('@');
+
+  // Validate that parsed name is not empty
+  if (!name.trim()) {
+    throw new Error(`Invalid package identifier: "${input}"`);
+  }
 
   return {
     name,

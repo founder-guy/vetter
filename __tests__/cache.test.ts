@@ -38,6 +38,11 @@ describe('Cache', () => {
         total: 0,
       },
     },
+    license: {
+      raw: 'MIT',
+      category: 'permissive',
+      normalizedSpdx: 'MIT',
+    },
     score: {
       grade: 'B',
       score: 25,
@@ -49,6 +54,9 @@ describe('Cache', () => {
         },
       ],
     },
+    dependencyBreakdown: [
+      { name: 'lodash', version: '4.17.21', transitiveCount: 0 },
+    ],
   };
 
   beforeEach(async () => {
@@ -327,6 +335,67 @@ describe('Cache', () => {
       );
 
       consoleErrorSpy.mockRestore();
+    });
+  });
+
+  describe('dependency breakdown caching', () => {
+    it('should cache and restore dependency breakdown data', async () => {
+      const publishedAt = '2024-01-01T00:00:00.000Z';
+      const resultWithBreakdown = {
+        ...mockResult,
+        dependencyBreakdown: [
+          { name: 'express', version: '4.18.0', transitiveCount: 50 },
+          { name: 'lodash', version: '4.17.21', transitiveCount: 0 },
+          { name: '@babel/core', version: '7.23.0', transitiveCount: 15 },
+        ],
+      };
+
+      // Save result with breakdown
+      await saveCache('test-pkg', '1.0.0', publishedAt, resultWithBreakdown);
+
+      // Load from cache
+      const cached = await loadCache('test-pkg', '1.0.0', publishedAt);
+
+      expect(cached).toBeDefined();
+      expect(cached?.analysis.dependencyBreakdown).toBeDefined();
+      expect(cached?.analysis.dependencyBreakdown).toHaveLength(3);
+      expect(cached?.analysis.dependencyBreakdown?.[0].name).toBe('express');
+      expect(cached?.analysis.dependencyBreakdown?.[0].transitiveCount).toBe(50);
+    });
+
+    it('should cache empty breakdown array (package with no deps)', async () => {
+      const publishedAt = '2024-01-01T00:00:00.000Z';
+      const resultWithEmptyBreakdown = {
+        ...mockResult,
+        dependencyBreakdown: [],
+      };
+
+      // Save result with empty breakdown
+      await saveCache('no-deps-pkg', '1.0.0', publishedAt, resultWithEmptyBreakdown);
+
+      // Load from cache
+      const cached = await loadCache('no-deps-pkg', '1.0.0', publishedAt);
+
+      expect(cached).toBeDefined();
+      expect(cached?.analysis.dependencyBreakdown).toBeDefined();
+      expect(cached?.analysis.dependencyBreakdown).toEqual([]);
+    });
+
+    it('should cache undefined breakdown (lockfile unavailable)', async () => {
+      const publishedAt = '2024-01-01T00:00:00.000Z';
+      const resultWithUndefinedBreakdown = {
+        ...mockResult,
+        dependencyBreakdown: undefined,
+      };
+
+      // Save result with undefined breakdown
+      await saveCache('no-lockfile-pkg', '1.0.0', publishedAt, resultWithUndefinedBreakdown);
+
+      // Load from cache
+      const cached = await loadCache('no-lockfile-pkg', '1.0.0', publishedAt);
+
+      expect(cached).toBeDefined();
+      expect(cached?.analysis.dependencyBreakdown).toBeUndefined();
     });
   });
 });

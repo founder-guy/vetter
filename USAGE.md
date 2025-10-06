@@ -40,6 +40,23 @@ vetter install express --json --no-install
 vetter install express --json --no-install | jq '.grade'
 ```
 
+### Dependency Breakdown
+```bash
+# Show top 10 dependencies by sub-tree size
+vetter install express --deps --no-install
+
+# Identify which dependencies contribute most to bloat
+vetter install webpack --deps --no-install
+
+# Combine with JSON for programmatic access
+vetter install express --deps --json --no-install | jq '.dependencyBreakdown'
+```
+
+The `--deps` flag reveals which packages pull in the most transitive dependencies:
+- **Instant on cache hits**: Breakdown is pre-computed and cached
+- **Works with all packages**: Supports both lockfile v1 and v2/v3 formats
+- **Top 10 only**: Shows the biggest contributors to dependency bloat
+
 ### Caching
 ```bash
 # Normal usage: cache is used automatically (7-day TTL, 50MB limit)
@@ -168,4 +185,5 @@ echo "✓ Package $PACKAGE is safe (Grade: $GRADE)"
 4. **Run in CI/CD** to prevent risky packages from entering your project
 5. **Cache is automatic**: Repeat scans are instant (use `--no-cache` to force fresh analysis)
 6. **Use `--refresh`** to update outdated cache entries
-7. **Consider context**: A grade C or D package might still be the right choice if it's well-established (like webpack)
+7. **Use `--deps`** to identify which dependencies cause bloat
+8. **Consider context**: A grade C or D package might still be the right choice if it's well-established (like webpack)

@@ -80,6 +80,13 @@ export interface Penalty {
   gradeDeduction: number;
 }
 
+// Dependency breakdown entry
+export interface DependencyBreakdown {
+  name: string;
+  version: string;
+  transitiveCount: number; // Number of transitive deps this package pulls in
+}
+
 // Complete analysis result
 export interface AnalysisResult {
   package: PackageSnapshot;
@@ -87,11 +94,14 @@ export interface AnalysisResult {
   security: SecurityAnalysis;
   license: LicenseInfo;
   score: ScoreResult;
+  dependencyBreakdown?: DependencyBreakdown[]; // Optional, only if lockfile available
 }
 
 // Workspace for shared temp directory and lockfile
 export interface PackageLockfileData {
-  packages: Record<string, any>;
+  lockfileVersion?: number; // 1, 2, or 3
+  packages?: Record<string, any>; // v2/v3 format
+  dependencies?: Record<string, any>; // v1 format
 }
 
 export interface Workspace {
@@ -118,6 +128,7 @@ export interface InstallOptions {
   version?: string;
   cache?: boolean; // Commander sets this to false when --no-cache is used
   refresh?: boolean;
+  deps?: boolean; // Show dependency breakdown
 }
 
 // Zod schemas for validation

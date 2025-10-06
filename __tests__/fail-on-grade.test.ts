@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { isGradeAtOrBelowThreshold } from '../src/grading.js';
-import type { Grade } from '../src/types.js';
+import { calculateScore } from '../src/scoring.js';
+import type { Grade, SecurityAnalysis, PackageMetrics, LicenseInfo } from '../src/types.js';
 
 describe('Grade Comparison', () => {
   describe('isGradeAtOrBelowThreshold', () => {
@@ -119,5 +120,123 @@ describe('CLI Integration Scenarios', () => {
     expect(isGradeAtOrBelowThreshold('B', threshold)).toBe(true);
     expect(isGradeAtOrBelowThreshold('C', threshold)).toBe(true);
     expect(isGradeAtOrBelowThreshold('D', threshold)).toBe(true);
+  });
+});
+
+describe('--fail-on-grade Integration with Scoring', () => {
+  /**
+   * Integration tests that verify the full flow:
+   * security + metrics → score → grade → threshold comparison
+   */
+
+  const permissiveLicense: LicenseInfo = {
+    raw: 'MIT',
+    category: 'permissive',
+    normalizedSpdx: 'MIT',
+  };
+
+  it('should determine exit code 1 when grade fails threshold (equal)', () => {
+    const security: SecurityAnalysis = {
+      status: 'vulnerable',
+      vulnerabilities: { critical: 0, high: 0, moderate: 1, low: 0, info: 0, total: 1 },
+    };
+    const metrics: PackageMetrics = {
+      daysSincePublish: 400,
+      maintainerCount: 1,
+      directDependencyCount: 0,
+      totalDependencyCount: 1,
+      approximateSizeMB: 0.5,
+    };
+
+    const score = calculateScore(security, metrics, permissiveLicense);
+    expect(score.grade).toBe('D'); // moderate vuln + stale + 1 maintainer = D
+
+    const shouldFail = isGradeAtOrBelowThreshold(score.grade, 'D');
+    expect(shouldFail).toBe(true);
+  });
+
+  it('should determine exit code 1 when grade fails threshold (worse)', () => {
+    const security: SecurityAnalysis = {
+      status: 'vulnerable',
+      vulnerabilities: { critical: 1, high: 0, moderate: 0, low: 0, info: 0, total: 1 },
+    };
+    const metrics: PackageMetrics = {
+      daysSincePublish: 800,
+      maintainerCount: 1,
+      directDependencyCount: 0,
+      totalDependencyCount: 100,
+      approximateSizeMB: 5,
+    };
+
+    const score = calculateScore(security, metrics, permissiveLicense);
+    expect(score.grade).toBe('F'); // Critical vuln + many penalties
+
+    const shouldFail = isGradeAtOrBelowThreshold(score.grade, 'C');
+    expect(shouldFail).toBe(true);
+  });
+
+  it('should determine exit code 0 when grade passes threshold', () => {
+    const security: SecurityAnalysis = {
+      status: 'clean',
+      vulnerabilities: { critical: 0, high: 0, moderate: 0, low: 0, info: 0, total: 0 },
+    };
+    const metrics: PackageMetrics = {
+      daysSincePublish: 30,
+      maintainerCount: 5,
+      directDependencyCount: 0,
+      totalDependencyCount: 1,
+      approximateSizeMB: 0.5,
+    };
+
+    const score = calculateScore(security, metrics, permissiveLicense);
+    expect(score.grade).toBe('A'); // Healthy package
+
+    const shouldFail = isGradeAtOrBelowThreshold(score.grade, 'C');
+    expect(shouldFail).toBe(false);
+  });
+
+  it('should handle strict CI threshold (only accept A)', () => {
+    const threshold = 'B' as Grade; // Fails on B or worse
+
+    // Package with minor issue (grade B)
+    const security: SecurityAnalysis = {
+      status: 'clean',
+      vulnerabilities: { critical: 0, high: 0, moderate: 0, low: 0, info: 0, total: 0 },
+    };
+    const metrics: PackageMetrics = {
+      daysSincePublish: 400,
+      maintainerCount: 2,
+      directDependencyCount: 0,
+      totalDependencyCount: 1,
+      approximateSizeMB: 0.5,
+    };
+
+    const score = calculateScore(security, metrics, permissiveLicense);
+    expect(score.grade).toBe('B');
+
+    const shouldFail = isGradeAtOrBelowThreshold(score.grade, threshold);
+    expect(shouldFail).toBe(true);
+  });
+
+  it('should handle lenient CI threshold (accept up to C)', () => {
+    const threshold = 'D' as Grade; // Only fails on D or worse
+
+    const security: SecurityAnalysis = {
+      status: 'clean',
+      vulnerabilities: { critical: 0, high: 0, moderate: 0, low: 0, info: 0, total: 0 },
+    };
+    const metrics: PackageMetrics = {
+      daysSincePublish: 400,
+      maintainerCount: 2,
+      directDependencyCount: 0,
+      totalDependencyCount: 1,
+      approximateSizeMB: 0.5,
+    };
+
+    const score = calculateScore(security, metrics, permissiveLicense);
+    expect(score.grade).toBe('B');
+
+    const shouldFail = isGradeAtOrBelowThreshold(score.grade, threshold);
+    expect(shouldFail).toBe(false); // B is better than D
   });
 });

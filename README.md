@@ -66,6 +66,9 @@ vetter install lodash --no-cache
 
 # Force re-analysis and update cache
 vetter install lodash --refresh
+
+# Show dependency breakdown (top 10 by sub-tree size)
+vetter install express --deps --no-install
 ```
 
 ## Caching
@@ -218,9 +221,16 @@ Use `--json` for machine-readable output:
       "severity": "medium",
       "gradeDeduction": 1
     }
+  ],
+  "dependencyBreakdown": [
+    { "name": "body-parser", "version": "1.20.1", "transitiveCount": 12 },
+    { "name": "accepts", "version": "1.3.8", "transitiveCount": 8 },
+    { "name": "type-is", "version": "1.6.18", "transitiveCount": 6 }
   ]
 }
 ```
+
+**Note**: The `dependencyBreakdown` field is only included when the `--deps` flag is used.
 
 ## Development
 
@@ -263,7 +273,8 @@ src/
     ├── workspace.ts    # Shared temporary workspace management
     ├── security.ts     # npm audit runner
     ├── metrics.ts      # Dependency and staleness metrics
-    └── license.ts      # License categorization and SPDX parsing
+    ├── license.ts      # License categorization and SPDX parsing
+    └── breakdown.ts    # Dependency sub-tree analysis (for --deps flag)
 ```
 
 ## Roadmap
@@ -383,6 +394,18 @@ Vetter normalizes legacy npm license formats (object `{ type: 'MIT' }` or array 
 
 **Future Plans:**
 Custom license policies (`--allow-license GPL-3.0`, `--deny-license AGPL-3.0`) are planned for a future release.
+
+### How can I see which dependencies cause bloat?
+
+Use the `--deps` flag to see a breakdown of the top 10 dependencies by sub-tree size:
+
+```bash
+vetter install express --deps --no-install
+```
+
+This shows which specific packages pull in the most transitive dependencies, helping you identify the biggest contributors to bloat. The breakdown is computed during analysis and cached, so repeat runs with `--deps` are instant.
+
+**Note**: The breakdown requires successful lockfile parsing. If dependency resolution fails but the count succeeds (rare fallback case), you'll see "Dependency breakdown unavailable (lockfile parsing failed)."
 
 ## License
 

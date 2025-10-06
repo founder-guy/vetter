@@ -73,6 +73,7 @@ node bin/vetter install <package> --json --no-install
 **Storage**: JSON file per entry in `~/.cache/vetter/entries/` (or platform equivalent)
 **TTL**: 7 days (hardcoded in v0.2)
 **Size Limit**: 50MB (automatically prunes oldest entries when exceeded)
+**Cache Version**: 3 (bumped for dependencyBreakdown field addition)
 
 **Flow**:
 1. Always fetch metadata first (cheap, needed for publish date validation)
@@ -220,12 +221,28 @@ When adding new scoring rules, always add corresponding test in `__tests__/scori
 4. **Blocking on audit**: Large packages (500+ deps) can take 60-90s to analyze
 5. **Temp dir cleanup**: Always use try/finally to ensure cleanup, but ignore cleanup errors
 
+## Dependency Breakdown (--deps flag)
+
+The `--deps` flag triggers display of the top 10 dependencies sorted by transitive sub-tree size. Implementation details:
+
+- **Computation**: Always runs during fresh analysis (adds ~10ms), cached in `AnalysisResult.dependencyBreakdown`
+- **Display**: Only shown when `--deps` flag is set (renderer checks `options.showDeps`)
+- **Cache**: Breakdown stored with CACHE_VERSION = 3; old entries auto-invalidate
+- **Fallback limitation**: If metrics service creates its own temp workspace (shared workspace failed), breakdown will be unavailable even if count succeeds
+- **Lockfile formats**: Supports both v2/v3 (packages map) and v1 (dependencies tree)
+- **Performance**: O(n) where n = package count; typical 100-dep package takes ~10ms
+
+When breakdown is unavailable:
+- Text mode: Shows "Dependency breakdown unavailable (lockfile parsing failed)" message
+- JSON mode: Omits `dependencyBreakdown` field entirely
+
 ## Performance Characteristics
 
 Typical analysis times:
 - Metadata fetch: ~500ms
 - Security audit: 5-60s (depends on dependency tree size)
 - Metrics calculation: 2-10s (depends on lockfile complexity)
+- Dependency breakdown: ~10ms (only on cache miss)
 
 Bottleneck: `npm audit` execution in temp workspace.
 

@@ -89,6 +89,27 @@ export interface AnalysisResult {
   score: ScoreResult;
 }
 
+// Workspace for shared temp directory and lockfile
+export interface PackageLockfileData {
+  packages: Record<string, any>;
+}
+
+export interface Workspace {
+  dir: string;
+  lockfile?: PackageLockfileData;
+  cleanup: () => Promise<void>;
+  installError?: string;
+}
+
+// Service options for accepting workspace
+export interface SecurityAnalysisOptions {
+  workspace?: Workspace;
+}
+
+export interface MetricsCalculationOptions {
+  workspace?: Workspace;
+}
+
 // CLI options
 export interface InstallOptions {
   json?: boolean;

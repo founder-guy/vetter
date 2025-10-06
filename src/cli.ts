@@ -13,9 +13,10 @@ import { analyzeLicense } from './services/license.js';
 import { calculateScore } from './scoring.js';
 import { renderTextReport, renderJsonReport, promptInstall } from './report.js';
 import { installPackage } from './install.js';
-import type { AnalysisResult, InstallOptions } from './types.js';
+import type { AnalysisResult, InstallOptions, Workspace } from './types.js';
 import { isGradeAtOrBelowThreshold, isValidGrade } from './grading.js';
 import { loadCache, saveCache, formatAge, clearCache, getCacheInfo } from './cache.js';
+import { prepareWorkspace } from './services/workspace.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -105,74 +106,100 @@ program
           console.error(chalk.dim('Cache miss, analyzing...'));
         }
 
-        // Run security audit
-        const auditSpinner = showSpinners
-          ? ora('Running security audit...').start()
+        // Prepare shared workspace (single npm install for both security and metrics)
+        let workspace: Workspace | null = null;
+        const workspaceSpinner = showSpinners
+          ? ora('Preparing workspace...').start()
           : null;
-        let securityAnalysis;
+
         try {
-          securityAnalysis = await analyzePackageSecurity(
-            packageSnapshot.name,
-            packageSnapshot.version
-          );
-          if (auditSpinner) {
-            if (securityAnalysis.status === 'clean') {
-              auditSpinner.succeed('Security audit complete - no vulnerabilities');
-            } else if (securityAnalysis.status === 'vulnerable') {
-              auditSpinner.warn(
-                `Security audit found ${securityAnalysis.vulnerabilities.total} vulnerabilities`
-              );
-            } else {
-              auditSpinner.info('Security audit status unknown');
+          workspace = await prepareWorkspace(packageSnapshot.name, packageSnapshot.version);
+          if (workspaceSpinner) {
+            workspaceSpinner.succeed('Workspace prepared');
+          }
+        } catch (error) {
+          if (workspaceSpinner) {
+            workspaceSpinner.fail('Failed to prepare workspace');
+          }
+          throw error;
+        }
+
+        try {
+          // Run security audit (reuses workspace)
+          const auditSpinner = showSpinners
+            ? ora('Running security audit...').start()
+            : null;
+          let securityAnalysis;
+          try {
+            securityAnalysis = await analyzePackageSecurity(
+              packageSnapshot.name,
+              packageSnapshot.version,
+              { workspace }
+            );
+            if (auditSpinner) {
+              if (securityAnalysis.status === 'clean') {
+                auditSpinner.succeed('Security audit complete - no vulnerabilities');
+              } else if (securityAnalysis.status === 'vulnerable') {
+                auditSpinner.warn(
+                  `Security audit found ${securityAnalysis.vulnerabilities.total} vulnerabilities`
+                );
+              } else {
+                auditSpinner.info('Security audit status unknown');
+              }
             }
+          } catch (error) {
+            if (auditSpinner) {
+              auditSpinner.fail('Security audit failed');
+            }
+            throw error;
           }
-        } catch (error) {
-          if (auditSpinner) {
-            auditSpinner.fail('Security audit failed');
+
+          // Calculate metrics (reuses workspace)
+          const metricsSpinner = showSpinners
+            ? ora('Analyzing package metrics...').start()
+            : null;
+          let metrics;
+          try {
+            metrics = await calculateMetrics(packageSnapshot, { workspace });
+            if (metricsSpinner) {
+              metricsSpinner.succeed('Package metrics analyzed');
+            }
+          } catch (error) {
+            if (metricsSpinner) {
+              metricsSpinner.fail('Failed to analyze metrics');
+            }
+            throw error;
           }
-          throw error;
-        }
 
-        // Calculate metrics
-        const metricsSpinner = showSpinners
-          ? ora('Analyzing package metrics...').start()
-          : null;
-        let metrics;
-        try {
-          metrics = await calculateMetrics(packageSnapshot);
-          if (metricsSpinner) {
-            metricsSpinner.succeed('Package metrics analyzed');
+          // Analyze license
+          const licenseInfo = analyzeLicense(packageSnapshot.license);
+
+          // Calculate score
+          const score = calculateScore(securityAnalysis, metrics, licenseInfo);
+
+          // Build result
+          result = {
+            package: packageSnapshot,
+            metrics,
+            security: securityAnalysis,
+            license: licenseInfo,
+            score,
+          };
+
+          // Save to cache (unless --no-cache)
+          if (options.cache !== false) {
+            await saveCache(
+              packageSnapshot.name,
+              packageSnapshot.version,
+              packageSnapshot.publishedAt.toISOString(),
+              result
+            );
           }
-        } catch (error) {
-          if (metricsSpinner) {
-            metricsSpinner.fail('Failed to analyze metrics');
+        } finally {
+          // Cleanup workspace (always runs, even on error)
+          if (workspace) {
+            await workspace.cleanup();
           }
-          throw error;
-        }
-
-        // Analyze license
-        const licenseInfo = analyzeLicense(packageSnapshot.license);
-
-        // Calculate score
-        const score = calculateScore(securityAnalysis, metrics, licenseInfo);
-
-        // Build result
-        result = {
-          package: packageSnapshot,
-          metrics,
-          security: securityAnalysis,
-          license: licenseInfo,
-          score,
-        };
-
-        // Save to cache (unless --no-cache)
-        if (options.cache !== false) {
-          await saveCache(
-            packageSnapshot.name,
-            packageSnapshot.version,
-            packageSnapshot.publishedAt.toISOString(),
-            result
-          );
         }
       }
 

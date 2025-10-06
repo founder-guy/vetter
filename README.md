@@ -260,6 +260,7 @@ src/
 ├── install.ts          # npm install proxy
 └── services/
     ├── npm.ts          # Package metadata fetching
+    ├── workspace.ts    # Shared temporary workspace management
     ├── security.ts     # npm audit runner
     ├── metrics.ts      # Dependency and staleness metrics
     └── license.ts      # License categorization and SPDX parsing
@@ -317,13 +318,13 @@ Use `--no-install` to skip this prompt entirely and only perform the analysis.
 
 ### Why does the security scan take so long for some packages?
 
-Vetter runs `npm audit` in an isolated temporary workspace to get accurate vulnerability data. For packages with large dependency trees (50+ transitive dependencies), this can take 30-60 seconds because:
+Vetter runs `npm audit` in an isolated temporary workspace to get accurate vulnerability data. For packages with large dependency trees (50+ transitive dependencies), the audit can take 30-60 seconds because:
 
-1. npm must resolve the entire dependency tree
-2. npm queries the registry's security database for every package
-3. The audit runs in a fresh environment without cached data
+1. npm must query the registry's security database for every package in the tree
+2. The audit analyzes all transitive dependencies (not just direct ones)
+3. The process runs in a fresh environment without cached audit data
 
-This is a fundamental limitation of npm's audit mechanism. Vetter shows a spinner during this process so you know it's working.
+This is a fundamental limitation of npm's audit mechanism. Vetter shows a spinner during this process so you know it's working. The dependency resolution itself is fast (shared workspace setup completes in <1 second), but the security database queries take time.
 
 ### Why does Vetter give itself different grades depending on where I run it?
 

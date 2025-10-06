@@ -363,14 +363,23 @@ export async function getCacheInfo(): Promise<{
 
 /**
  * Formats a duration in seconds to a human-readable string.
+ * Returns "unknown" for invalid inputs (NaN, Infinity, negative values).
  */
 export function formatAge(seconds: number): string {
-  const minutes = Math.floor(seconds / 60);
+  // Validate input: reject non-finite or negative values
+  if (!Number.isFinite(seconds) || seconds < 0) {
+    return 'unknown';
+  }
+
+  // Round to nearest whole second (handle decimals)
+  const wholeSeconds = Math.floor(seconds);
+
+  const minutes = Math.floor(wholeSeconds / 60);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
 
   if (days > 0) return `${days}d`;
   if (hours > 0) return `${hours}h`;
   if (minutes > 0) return `${minutes}m`;
-  return `${seconds}s`;
+  return `${wholeSeconds}s`;
 }

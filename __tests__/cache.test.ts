@@ -126,6 +126,31 @@ describe('Cache', () => {
       expect(formatAge(86400)).toBe('1d');
       expect(formatAge(172800)).toBe('2d');
     });
+
+    describe('edge cases', () => {
+      it('should handle negative seconds', () => {
+        expect(formatAge(-1)).toBe('unknown');
+        expect(formatAge(-100)).toBe('unknown');
+      });
+
+      it('should handle NaN', () => {
+        expect(formatAge(NaN)).toBe('unknown');
+      });
+
+      it('should handle Infinity', () => {
+        expect(formatAge(Infinity)).toBe('unknown');
+        expect(formatAge(-Infinity)).toBe('unknown');
+      });
+
+      it('should handle decimal seconds by flooring', () => {
+        expect(formatAge(30.7)).toBe('30s');
+        expect(formatAge(59.9)).toBe('59s');
+      });
+
+      it('should handle zero', () => {
+        expect(formatAge(0)).toBe('0s');
+      });
+    });
   });
 
   describe('saveCache and loadCache', () => {

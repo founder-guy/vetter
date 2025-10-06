@@ -98,10 +98,19 @@ export interface AnalysisResult {
 }
 
 // Workspace for shared temp directory and lockfile
+export interface PackageLockEntry {
+  version?: string;
+  resolved?: string;
+  integrity?: string;
+  dependencies?: Record<string, string | PackageLockEntry>;
+  requires?: Record<string, string>;
+  [key: string]: unknown;
+}
+
 export interface PackageLockfileData {
   lockfileVersion?: number; // 1, 2, or 3
-  packages?: Record<string, any>; // v2/v3 format
-  dependencies?: Record<string, any>; // v1 format
+  packages?: Record<string, PackageLockEntry>; // v2/v3 format
+  dependencies?: Record<string, PackageLockEntry>; // v1 format
 }
 
 export interface Workspace {

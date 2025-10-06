@@ -192,30 +192,6 @@ function categorizeSingleLicense(license: string): LicenseCategory {
 }
 
 /**
- * Find the position of the next top-level operator (OR or AND) in the expression,
- * respecting parentheses. Returns { operator: 'OR'|'AND', position: number } or null if not found.
- */
-function findTopLevelOperator(expression: string, operator: 'OR' | 'AND'): number | null {
-  const upper = expression.toUpperCase();
-  const pattern = operator === 'OR' ? ' OR ' : ' AND ';
-  let depth = 0;
-
-  for (let i = 0; i <= expression.length - pattern.length; i++) {
-    const char = expression[i];
-
-    if (char === '(') {
-      depth++;
-    } else if (char === ')') {
-      depth--;
-    } else if (depth === 0 && upper.substring(i, i + pattern.length) === pattern) {
-      return i;
-    }
-  }
-
-  return null;
-}
-
-/**
  * Split expression by top-level operator, respecting parentheses.
  * Example: "MIT OR (Apache-2.0 AND GPL-3.0)" split by OR -> ["MIT", "(Apache-2.0 AND GPL-3.0)"]
  */

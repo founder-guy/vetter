@@ -1,4 +1,4 @@
-import type { PackageLockfileData, DependencyBreakdown } from '../types.js';
+import type { PackageLockfileData, DependencyBreakdown, PackageLockEntry } from '../types.js';
 
 /**
  * Analyze package-lock.json to identify top dependencies by sub-tree size.
@@ -41,7 +41,7 @@ export function analyzeDependencyBreakdown(
 /**
  * Analyze v2/v3 lockfile format (packages map)
  */
-function analyzePackagesMap(packages: Record<string, any>, targetPackage: string): DependencyBreakdown[] {
+function analyzePackagesMap(packages: Record<string, PackageLockEntry>, targetPackage: string): DependencyBreakdown[] {
   const breakdown: DependencyBreakdown[] = [];
 
   // Find the target package in the lockfile
@@ -84,7 +84,7 @@ function analyzePackagesMap(packages: Record<string, any>, targetPackage: string
  */
 function countTransitiveDeps(
   basePath: string,
-  packages: Record<string, any>
+  packages: Record<string, PackageLockEntry>
 ): number {
   const visited = new Set<string>();
   const queue: string[] = [basePath];
@@ -129,7 +129,7 @@ function countTransitiveDeps(
 /**
  * Analyze v1 lockfile format (dependencies tree)
  */
-function analyzeDependenciesTree(dependencies: Record<string, any>, targetPackage: string): DependencyBreakdown[] {
+function analyzeDependenciesTree(dependencies: Record<string, PackageLockEntry>, targetPackage: string): DependencyBreakdown[] {
   const breakdown: DependencyBreakdown[] = [];
 
   // Find the target package in the v1 tree
@@ -141,6 +141,7 @@ function analyzeDependenciesTree(dependencies: Record<string, any>, targetPackag
 
   // Each key is a direct dependency of the target package
   for (const [name, depInfo] of Object.entries(targetDeps)) {
+    if (typeof depInfo === 'string') continue; // Skip string entries (shouldn't happen in v1)
     const version = depInfo.version || 'unknown';
     const transitiveCount = countTransitiveDepsV1(depInfo, name);
     breakdown.push({ name, version, transitiveCount });
@@ -155,7 +156,7 @@ function analyzeDependenciesTree(dependencies: Record<string, any>, targetPackag
  * Count transitive dependencies in v1 format (recursive)
  */
 function countTransitiveDepsV1(
-  depInfo: any,
+  depInfo: PackageLockEntry,
   depName?: string,
   visited = new Set<string>()
 ): number {
@@ -168,8 +169,9 @@ function countTransitiveDepsV1(
   const nestedDeps = depInfo.dependencies || {};
 
   for (const [name, nestedDepInfo] of Object.entries(nestedDeps)) {
+    if (typeof nestedDepInfo === 'string') continue; // Skip string entries
     count++; // Count this dependency
-    count += countTransitiveDepsV1(nestedDepInfo as any, name, visited); // Recursively count its deps
+    count += countTransitiveDepsV1(nestedDepInfo, name, visited); // Recursively count its deps
   }
 
   return count;

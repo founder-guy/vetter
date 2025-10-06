@@ -4,6 +4,11 @@ import type { PackageSnapshot, PackageIdentifier } from '../types.js';
 
 type Maintainer = string | { name?: string; email?: string };
 
+interface LegacyLicense {
+  type?: string;
+  url?: string;
+}
+
 /**
  * Parse package string into name and version
  * Supports: pkg, @scope/pkg, pkg@1.0.0, @scope/pkg@1.0.0
@@ -66,7 +71,7 @@ export async function getPackageMetadata(
     } else if (Array.isArray(manifest.licenses)) {
       // Legacy array format: [{ type: 'MIT' }, { type: 'Apache-2.0' }]
       const types = manifest.licenses
-        .map((l: any) => (typeof l === 'string' ? l : l?.type))
+        .map((l: string | LegacyLicense) => (typeof l === 'string' ? l : l?.type))
         .filter(Boolean);
       normalizedLicense = types.length > 0 ? types.join(' OR ') : undefined;
     }

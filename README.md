@@ -1,10 +1,12 @@
 # Vetter
 
 [![npm](https://img.shields.io/npm/v/vetter)](https://www.npmjs.com/package/vetter)
+[![npm downloads](https://img.shields.io/npm/dw/vetter)](https://www.npmjs.com/package/vetter)
+[![license](https://img.shields.io/npm/l/vetter)](https://www.npmjs.com/package/vetter)
 
 > Pre-install risk scanner for npm packages
 
-**Vetter** analyzes npm packages before installation, evaluating security vulnerabilities, maintenance status, dependency bloat, and other risk factors. Get an **A–F grade** for any package and make informed decisions about what goes into your `node_modules`.
+**Vetter** analyzes npm packages before installation, evaluating security vulnerabilities, maintenance status, license risks, dependency bloat, and other risk factors. Get an **A–F grade** for any package and make informed decisions about what goes into your `node_modules`.
 
 ## Features
 

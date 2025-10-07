@@ -47,14 +47,17 @@ export async function analyzePackageSecurity(
 
       // Run npm install with --package-lock-only to avoid extracting tarballs
       try {
-        await execFileAsync(
-          'npm',
-          ['install', '--package-lock-only', '--ignore-scripts', '--no-audit'],
-          {
-            cwd: tempDir,
-            timeout: 60000,
-          }
-        );
+        const npmArgs = ['install', '--package-lock-only', '--ignore-scripts', '--no-audit'];
+
+        // Conditionally append --registry flag
+        if (options?.registry?.trim()) {
+          npmArgs.push('--registry', options.registry.trim());
+        }
+
+        await execFileAsync('npm', npmArgs, {
+          cwd: tempDir,
+          timeout: 60000,
+        });
       } catch (installError: unknown) {
         // Continue even if install partially fails
         const message = installError instanceof Error ? installError.message : String(installError);

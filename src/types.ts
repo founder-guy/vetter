@@ -120,12 +120,17 @@ export interface Workspace {
   installError?: string;
 }
 
+// Registry configuration for custom/private npm registries
+export interface RegistryOptions {
+  registry?: string;
+}
+
 // Service options for accepting workspace
-export interface SecurityAnalysisOptions {
+export interface SecurityAnalysisOptions extends RegistryOptions {
   workspace?: Workspace;
 }
 
-export interface MetricsCalculationOptions {
+export interface MetricsCalculationOptions extends RegistryOptions {
   workspace?: Workspace;
 }
 
@@ -138,6 +143,7 @@ export interface InstallOptions {
   cache?: boolean; // Commander sets this to false when --no-cache is used
   refresh?: boolean;
   deps?: boolean; // Show dependency breakdown
+  registry?: string;
 }
 
 // Zod schemas for validation

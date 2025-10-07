@@ -48,6 +48,12 @@ vi.mock('node:fs/promises', () => ({
   mkdtemp: vi.fn().mockResolvedValue('/tmp/vetter-test-123'),
   rm: vi.fn().mockResolvedValue(undefined),
   writeFile: vi.fn().mockResolvedValue(undefined),
+  readFile: vi.fn().mockResolvedValue(JSON.stringify({
+    name: 'test-package',
+    version: '1.0.0',
+    lockfileVersion: 3,
+    packages: {},
+  })),
 }));
 
 describe('analyzePackageSecurity', () => {

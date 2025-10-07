@@ -1,20 +1,43 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import type { SecurityAnalysis, VulnerabilitySummary, SecurityAnalysisOptions } from '../types.js';
 import { AuditResponseSchema } from '../types.js';
+import { createTempWorkspace } from './npm-workspace.js';
+import { getErrorMessage } from '../utils/errors.js';
+import { NPM_INSTALL_TIMEOUT, NPM_AUDIT_TIMEOUT } from '../constants.js';
+import { cleanupTempDir } from '../utils/cleanup.js';
 
 const execFileAsync = promisify(execFile);
 
 /**
+ * Empty vulnerability summary (used when no vulnerabilities found or audit fails)
+ */
+const EMPTY_VULNERABILITIES: VulnerabilitySummary = {
+  critical: 0,
+  high: 0,
+  moderate: 0,
+  low: 0,
+  info: 0,
+  total: 0,
+};
+
+/**
  * Run npm audit in a temporary workspace
+ *
+ * **Workspace Handling:**
+ * - If `options.workspace` is provided, uses shared workspace directory for audit
+ * - If shared workspace has `installError`, returns unknown status immediately (fail-fast)
+ * - If no workspace provided, creates temporary workspace as fallback
+ *
+ * **Error Contract:**
+ * - Returns `status: 'unknown'` when workspace preparation or audit fails
+ * - Check `auditError` field for failure details
+ * - Never throws (errors are captured in return value)
  *
  * @param packageName - Package name to audit
  * @param version - Package version to audit
- * @param options - Optional workspace to reuse (skips install if provided)
- * @returns Security analysis with vulnerability summary
+ * @param options - Optional workspace to reuse and registry configuration
+ * @returns Security analysis with vulnerability summary (status: clean | vulnerable | unknown)
  */
 export async function analyzePackageSecurity(
   packageName: string,
@@ -26,42 +49,28 @@ export async function analyzePackageSecurity(
   let tempDir: string | null = useSharedWorkspace ? options.workspace!.dir : null;
 
   try {
-    // If using shared workspace, emit warning if install failed
-    if (useSharedWorkspace) {
-      if (options.workspace!.installError) {
-        console.warn('Install warning:', options.workspace!.installError);
-      }
-    } else {
-      // Create temp directory (fallback when no workspace provided)
-      tempDir = await mkdtemp(join(tmpdir(), 'vetter-'));
-
-      // Create minimal package.json
-      const pkgJson = {
-        name: 'temp-audit',
-        version: '1.0.0',
-        dependencies: {
-          [packageName]: version,
-        },
+    // Fail fast if shared workspace preparation failed
+    if (useSharedWorkspace && options.workspace!.installError) {
+      return {
+        status: 'unknown',
+        vulnerabilities: EMPTY_VULNERABILITIES,
+        auditError: `Workspace preparation failed: ${options.workspace!.installError}`,
       };
-      await writeFile(join(tempDir, 'package.json'), JSON.stringify(pkgJson, null, 2));
+    }
 
-      // Run npm install with --package-lock-only to avoid extracting tarballs
-      try {
-        const npmArgs = ['install', '--package-lock-only', '--ignore-scripts', '--no-audit'];
+    // Fallback: create temporary workspace if not provided
+    if (!useSharedWorkspace) {
+      const result = await createTempWorkspace(packageName, version, {
+        workspaceName: 'audit',
+        registry: options?.registry,
+        timeout: NPM_INSTALL_TIMEOUT,
+      });
 
-        // Conditionally append --registry flag
-        if (options?.registry?.trim()) {
-          npmArgs.push('--registry', options.registry.trim());
-        }
+      tempDir = result.dir;
 
-        await execFileAsync('npm', npmArgs, {
-          cwd: tempDir,
-          timeout: 60000,
-        });
-      } catch (installError: unknown) {
-        // Continue even if install partially fails
-        const message = installError instanceof Error ? installError.message : String(installError);
-        console.warn('Install warning:', message);
+      // Warn about install failures but continue (audit might still work)
+      if (result.installError) {
+        console.warn('Install warning:', result.installError);
       }
     }
 
@@ -76,21 +85,14 @@ export async function analyzePackageSecurity(
 
       const { stdout } = await execFileAsync('npm', auditArgs, {
         cwd: tempDir,
-        timeout: 30000,
+        timeout: NPM_AUDIT_TIMEOUT,
       });
 
       const auditData = JSON.parse(stdout);
       const parsed = AuditResponseSchema.parse(auditData);
 
       const vulnerabilities: VulnerabilitySummary =
-        parsed.metadata?.vulnerabilities || {
-          critical: 0,
-          high: 0,
-          moderate: 0,
-          low: 0,
-          info: 0,
-          total: 0,
-        };
+        parsed.metadata?.vulnerabilities || EMPTY_VULNERABILITIES;
 
       const status =
         vulnerabilities.total > 0
@@ -115,14 +117,7 @@ export async function analyzePackageSecurity(
           const parsed = AuditResponseSchema.parse(auditData);
 
           const vulnerabilities: VulnerabilitySummary =
-            parsed.metadata?.vulnerabilities || {
-              critical: 0,
-              high: 0,
-              moderate: 0,
-              low: 0,
-              info: 0,
-              total: 0,
-            };
+            parsed.metadata?.vulnerabilities || EMPTY_VULNERABILITIES;
 
           return {
             status: vulnerabilities.total > 0 ? 'vulnerable' : 'clean',
@@ -134,42 +129,22 @@ export async function analyzePackageSecurity(
       }
 
       // Audit failed or unsupported
-      const message = auditError instanceof Error ? auditError.message : String(auditError);
       return {
         status: 'unknown',
-        vulnerabilities: {
-          critical: 0,
-          high: 0,
-          moderate: 0,
-          low: 0,
-          info: 0,
-          total: 0,
-        },
-        auditError: message,
+        vulnerabilities: EMPTY_VULNERABILITIES,
+        auditError: getErrorMessage(auditError),
       };
     }
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
     return {
       status: 'unknown',
-      vulnerabilities: {
-        critical: 0,
-        high: 0,
-        moderate: 0,
-        low: 0,
-        info: 0,
-        total: 0,
-      },
-      auditError: message,
+      vulnerabilities: EMPTY_VULNERABILITIES,
+      auditError: getErrorMessage(error),
     };
   } finally {
     // Cleanup temp directory (only if we created it, not if using shared workspace)
-    if (tempDir && !useSharedWorkspace) {
-      try {
-        await rm(tempDir, { recursive: true, force: true });
-      } catch {
-        // Ignore cleanup errors
-      }
+    if (!useSharedWorkspace) {
+      await cleanupTempDir(tempDir);
     }
   }
 }

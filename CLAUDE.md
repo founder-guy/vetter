@@ -232,6 +232,63 @@ When adding new scoring rules, always add corresponding test in `__tests__/scori
 4. **Blocking on audit**: Large packages (500+ deps) can take 60-90s to analyze
 5. **Temp dir cleanup**: Always use try/finally to ensure cleanup, but ignore cleanup errors
 6. **npm execution**: Never use `shell: true` with spawn (security risk); always add timeouts to prevent hangs
+7. **Commander exit behavior**: Use `program.outputHelp()` instead of `program.help()` to avoid implicit `process.exit(0)`. Set `process.exitCode` in action handlers, exit once at the end
+
+## CLI Architecture
+
+**Pattern:** Single exit point with testable command modules
+
+The CLI follows a command extraction pattern to maximize testability and maintainability:
+- **cli.ts**: Argument parsing and routing (Commander.js setup)
+- **commands/**: Command implementation modules (business logic, no process.exit)
+- **services/**: Reusable analysis logic
+
+**Structure:**
+```typescript
+// Command module (testable, returns exit codes)
+export async function runCommand(args: string, options: Options): Promise<number> {
+  try {
+    // Business logic here
+    return 0;  // Success
+  } catch (error) {
+    console.error(error);
+    return 1;  // Failure
+  }
+}
+
+// CLI router (sets exit code, single exit point)
+program
+  .command('cmd <args>')
+  .action(async (args, opts) => {
+    const exitCode = await runCommand(args, opts);
+    process.exitCode = exitCode;
+  });
+
+await program.parseAsync(process.argv);
+
+if (process.argv.length === 2) {
+  program.outputHelp();  // NOT help() - that calls process.exit()
+  process.exitCode = 0;
+}
+
+process.exit(process.exitCode ?? 0);  // Single exit point
+```
+
+**Benefits:**
+- **Testable**: Commands are pure functions returning exit codes (no process.exit in logic)
+- **Clean shutdown**: Single exit point prevents race conditions with async actions
+- **Easy mocking**: Mock services in tests, verify exit codes directly
+
+**Testing commands:**
+```typescript
+// __tests__/install-command.test.ts
+it('should return exit code 1 when grade fails threshold', async () => {
+  const exitCode = await runInstallCommand('pkg', { failOnGrade: 'C' });
+  expect(exitCode).toBe(1);
+});
+```
+
+**Top-level await:** Requires Node.js ≥14.8 and ES2022 target (already configured in tsconfig.json).
 
 ## Dependency Breakdown (--deps flag)
 

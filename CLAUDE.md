@@ -231,6 +231,7 @@ When adding new scoring rules, always add corresponding test in `__tests__/scori
 3. **Wrong Commander property**: Use `options.install !== false`, not `options.noInstall`
 4. **Blocking on audit**: Large packages (500+ deps) can take 60-90s to analyze
 5. **Temp dir cleanup**: Always use try/finally to ensure cleanup, but ignore cleanup errors
+6. **npm execution**: Never use `shell: true` with spawn (security risk); always add timeouts to prevent hangs
 
 ## Dependency Breakdown (--deps flag)
 
@@ -256,6 +257,10 @@ Typical analysis times:
 - Dependency breakdown: ~10ms (only on cache miss)
 
 Bottleneck: `npm audit` execution in temp workspace.
+
+**Timeouts:**
+- Analysis operations: 30-60s (prevents hangs during analysis)
+- User install: 5 minutes (allows time for large packages)
 
 ## Custom Registry Support
 

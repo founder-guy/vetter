@@ -222,55 +222,52 @@ export async function saveCache(
 }
 
 /**
- * Calculates the total size of the cache directory.
+ * Calculates total cache size and retrieves file stats in a single pass.
+ * Uses parallel I/O for better performance with large caches.
+ *
+ * @returns Object containing total size and array of file stats
  */
-async function getCacheSize(): Promise<number> {
+async function getCacheSizeAndStats(): Promise<{
+  totalSize: number;
+  files: Array<{ path: string; mtime: Date; size: number }>;
+}> {
   const cacheDir = getCacheDir();
+
   try {
     const files = await fs.readdir(cacheDir);
-    let totalSize = 0;
+    const jsonFiles = files.filter(f => f.endsWith('.json'));
 
-    for (const file of files) {
-      if (file.endsWith('.json')) {
+    // Parallelize stat operations for better performance
+    const fileStats = await Promise.all(
+      jsonFiles.map(async (file) => {
         const filePath = join(cacheDir, file);
         const stats = await fs.stat(filePath);
-        totalSize += stats.size;
-      }
-    }
+        return {
+          path: filePath,
+          mtime: stats.mtime,
+          size: stats.size,
+        };
+      })
+    );
 
-    return totalSize;
+    const totalSize = fileStats.reduce((sum, file) => sum + file.size, 0);
+
+    return { totalSize, files: fileStats };
   } catch (error) {
-    return 0;
+    return { totalSize: 0, files: [] };
   }
 }
 
 /**
  * Prunes the oldest cache entries if total size exceeds MAX_CACHE_SIZE.
+ * Optimized to use a single directory scan with parallel stat operations.
  */
 async function pruneIfOversized(): Promise<void> {
-  const cacheDir = getCacheDir();
-
   try {
-    const totalSize = await getCacheSize();
+    const { totalSize, files: fileStats } = await getCacheSizeAndStats();
 
     if (totalSize <= MAX_CACHE_SIZE) {
       return;
-    }
-
-    // Get all cache files with their stats
-    const files = await fs.readdir(cacheDir);
-    const fileStats: Array<{ path: string; mtime: Date; size: number }> = [];
-
-    for (const file of files) {
-      if (file.endsWith('.json')) {
-        const filePath = join(cacheDir, file);
-        const stats = await fs.stat(filePath);
-        fileStats.push({
-          path: filePath,
-          mtime: stats.mtime,
-          size: stats.size,
-        });
-      }
     }
 
     // Sort by modification time (oldest first)
@@ -341,16 +338,14 @@ export async function getCacheInfo(): Promise<{
   count: number;
 }> {
   const cacheDir = getCacheDir();
-  const sizeBytes = await getCacheSize();
 
   try {
-    const files = await fs.readdir(cacheDir);
-    const count = files.filter((f) => f.endsWith('.json')).length;
+    const { totalSize, files } = await getCacheSizeAndStats();
 
     return {
       path: cacheDir,
-      sizeMB: parseFloat((sizeBytes / (1024 * 1024)).toFixed(2)),
-      count,
+      sizeMB: parseFloat((totalSize / (1024 * 1024)).toFixed(2)),
+      count: files.length,
     };
   } catch (error) {
     // If directory doesn't exist or can't be read, return zero values

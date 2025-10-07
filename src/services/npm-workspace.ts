@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { PackageLockfileData } from '../types.js';
 import { getErrorMessage } from '../utils/errors.js';
+import { NPM_INSTALL_TIMEOUT } from '../constants.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -28,7 +29,7 @@ export interface TempWorkspaceOptions {
   workspaceName?: string;
   /** Custom npm registry URL */
   registry?: string;
-  /** npm install timeout in milliseconds (default: 60000) */
+  /** npm install timeout in milliseconds (default: NPM_INSTALL_TIMEOUT) */
   timeout?: number;
 }
 
@@ -110,7 +111,7 @@ export async function createTempWorkspace(
   try {
     await execFileAsync('npm', npmArgs, {
       cwd: tmpDir,
-      timeout: options?.timeout ?? 60000,
+      timeout: options?.timeout ?? NPM_INSTALL_TIMEOUT,
     });
 
     // Parse lockfile (errors caught and stored)

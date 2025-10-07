@@ -1,6 +1,7 @@
 import { rm } from 'node:fs/promises';
 import type { Workspace } from '../types.js';
 import { createTempWorkspace } from './npm-workspace.js';
+import { NPM_INSTALL_TIMEOUT } from '../constants.js';
 
 /**
  * Prepare a temporary workspace for package analysis.
@@ -41,7 +42,7 @@ export async function prepareWorkspace(
     {
       workspaceName: 'workspace',
       registry: options?.registry,
-      timeout: 60000,
+      timeout: NPM_INSTALL_TIMEOUT,
     }
   );
 

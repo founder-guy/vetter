@@ -1,7 +1,8 @@
-import { rm } from 'node:fs/promises';
 import type { PackageSnapshot, PackageMetrics, PackageLockfileData } from '../types.js';
 import { createTempWorkspace } from './npm-workspace.js';
 import { getErrorMessage } from '../utils/errors.js';
+import { NPM_INSTALL_TIMEOUT } from '../constants.js';
+import { cleanupTempDir } from '../utils/cleanup.js';
 
 /**
  * Count total transitive dependencies from package-lock.json
@@ -48,7 +49,7 @@ async function countDependencies(
     const result = await createTempWorkspace(packageName, version, {
       workspaceName: 'deps',
       registry: options?.registry,
-      timeout: 60000,
+      timeout: NPM_INSTALL_TIMEOUT,
     });
 
     tempDir = result.dir;
@@ -77,13 +78,7 @@ async function countDependencies(
     return -1;
   } finally {
     // Cleanup temp directory
-    if (tempDir) {
-      try {
-        await rm(tempDir, { recursive: true, force: true });
-      } catch {
-        // Ignore cleanup errors
-      }
-    }
+    await cleanupTempDir(tempDir);
   }
 }
 

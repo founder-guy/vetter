@@ -1,10 +1,11 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { rm } from 'node:fs/promises';
 import type { SecurityAnalysis, VulnerabilitySummary, SecurityAnalysisOptions } from '../types.js';
 import { AuditResponseSchema } from '../types.js';
 import { createTempWorkspace } from './npm-workspace.js';
 import { getErrorMessage } from '../utils/errors.js';
+import { NPM_INSTALL_TIMEOUT, NPM_AUDIT_TIMEOUT } from '../constants.js';
+import { cleanupTempDir } from '../utils/cleanup.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -62,7 +63,7 @@ export async function analyzePackageSecurity(
       const result = await createTempWorkspace(packageName, version, {
         workspaceName: 'audit',
         registry: options?.registry,
-        timeout: 60000,
+        timeout: NPM_INSTALL_TIMEOUT,
       });
 
       tempDir = result.dir;
@@ -84,7 +85,7 @@ export async function analyzePackageSecurity(
 
       const { stdout } = await execFileAsync('npm', auditArgs, {
         cwd: tempDir,
-        timeout: 30000,
+        timeout: NPM_AUDIT_TIMEOUT,
       });
 
       const auditData = JSON.parse(stdout);
@@ -142,12 +143,8 @@ export async function analyzePackageSecurity(
     };
   } finally {
     // Cleanup temp directory (only if we created it, not if using shared workspace)
-    if (tempDir && !useSharedWorkspace) {
-      try {
-        await rm(tempDir, { recursive: true, force: true });
-      } catch {
-        // Ignore cleanup errors
-      }
+    if (!useSharedWorkspace) {
+      await cleanupTempDir(tempDir);
     }
   }
 }

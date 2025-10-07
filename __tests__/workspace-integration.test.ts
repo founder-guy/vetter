@@ -127,55 +127,30 @@ describe('Shared Workspace Integration', () => {
     }
   });
 
-  it('should emit warning when workspace install fails but audit still runs', async () => {
-    // Mock install failure but audit success
-    let installCallCount = 0;
+  it('should fail fast when workspace install fails (new behavior)', async () => {
+    // Mock install failure
     execFileAsyncMock.mockImplementation(async (cmd: string, args: string[], options?: any) => {
       if (cmd === 'npm' && args[0] === 'install') {
-        installCallCount++;
         throw new Error('Network timeout');
-      }
-      if (cmd === 'npm' && args[0] === 'audit') {
-        return {
-          stdout: JSON.stringify({
-            metadata: {
-              vulnerabilities: {
-                critical: 0,
-                high: 0,
-                moderate: 0,
-                low: 0,
-                info: 0,
-                total: 0,
-              },
-            },
-          }),
-          stderr: '',
-        };
       }
       return { stdout: '', stderr: '' };
     });
 
-    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
     const workspace = await prepareWorkspace(mockPackage.name, mockPackage.version);
     expect(workspace.installError).toBeDefined();
+    expect(workspace.installError).toContain('Network timeout');
 
     try {
       const security = await analyzePackageSecurity(mockPackage.name, mockPackage.version, {
         workspace,
       });
 
-      // Warning should be emitted
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        'Install warning:',
-        expect.stringContaining('Network timeout')
-      );
-
-      // Audit should still run and succeed
-      expect(security.status).toBe('clean');
+      // Security should fail fast with unknown status
+      expect(security.status).toBe('unknown');
+      expect(security.auditError).toBe('Workspace preparation failed: Network timeout');
+      expect(security.vulnerabilities.total).toBe(0);
     } finally {
       await workspace.cleanup();
-      consoleWarnSpy.mockRestore();
     }
   });
 

@@ -1,19 +1,19 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-import { mkdtemp, rm, writeFile, readFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { rm } from 'node:fs/promises';
 import type { PackageSnapshot, PackageMetrics, PackageLockfileData } from '../types.js';
-
-const execFileAsync = promisify(execFile);
+import { createTempWorkspace } from './npm-workspace.js';
+import { getErrorMessage } from '../utils/errors.js';
 
 /**
  * Count total transitive dependencies from package-lock.json
  * Returns -1 if counting fails (to distinguish from 0 dependencies)
  *
- * **Limitation**: Fallback workspace (line 39-87) creates its own temp directory
- * but does not surface the parsed lockfile. Dependency count may succeed while
- * dependencyBreakdown remains unavailable. Use shared workspace to avoid this.
+ * **Workspace Handling:**
+ * - If `lockfile` is provided, uses it directly (fast path - CLI always provides this)
+ * - If parsing fails or no lockfile provided, falls back to creating temporary workspace
+ * - Fallback uses shared helper for consistency (only occurs in standalone test usage)
+ *
+ * **Note:** In CLI flow, shared workspace is always provided, so fallback rarely executes.
+ * The fallback lockfile is used internally but not exposed to caller.
  *
  * @param packageName - Package name
  * @param version - Package version
@@ -41,51 +41,42 @@ async function countDependencies(
     }
   }
 
-  // Fallback: create temp workspace (original behavior)
+  // Fallback: create temp workspace using shared helper
   let tempDir: string | null = null;
 
   try {
-    tempDir = await mkdtemp(join(tmpdir(), 'vetter-deps-'));
-
-    const pkgJson = {
-      name: 'temp-deps-check',
-      version: '1.0.0',
-      dependencies: {
-        [packageName]: version,
-      },
-    };
-    await writeFile(join(tempDir, 'package.json'), JSON.stringify(pkgJson, null, 2));
-
-    // Generate package-lock.json
-    const npmArgs = ['install', '--package-lock-only', '--ignore-scripts', '--no-audit'];
-
-    // Conditionally append --registry flag
-    if (options?.registry?.trim()) {
-      npmArgs.push('--registry', options.registry.trim());
-    }
-
-    await execFileAsync('npm', npmArgs, {
-      cwd: tempDir,
+    const result = await createTempWorkspace(packageName, version, {
+      workspaceName: 'deps',
+      registry: options?.registry,
       timeout: 60000,
     });
 
-    // Read and parse package-lock.json
-    const lockContent = await readFile(join(tempDir, 'package-lock.json'), 'utf-8');
-    const lockData = JSON.parse(lockContent);
+    tempDir = result.dir;
 
-    // Count packages in node_modules (excludes root package)
-    const packages = lockData.packages || {};
-    const nodeModulesCount = Object.keys(packages).filter(
-      (key) => key.startsWith('node_modules/')
-    ).length;
+    // Check for install errors
+    if (result.installError) {
+      console.warn('Could not count dependencies:', result.installError);
+      return -1;
+    }
 
-    return nodeModulesCount;
+    // Use parsed lockfile from helper (this fixes the limitation!)
+    if (result.lockfile) {
+      const packages = result.lockfile.packages || {};
+      const nodeModulesCount = Object.keys(packages).filter(
+        (key) => key.startsWith('node_modules/')
+      ).length;
+      return nodeModulesCount;
+    }
+
+    // Lockfile unavailable even though install succeeded
+    console.warn('Could not count dependencies: lockfile unavailable');
+    return -1;
   } catch (error) {
     // Return -1 to indicate failure (distinguishes from 0 dependencies)
-    console.warn('Could not count dependencies:', (error as Error).message);
+    console.warn('Could not count dependencies:', getErrorMessage(error));
     return -1;
   } finally {
-    // Cleanup (wrapped in try/finally to ensure cleanup even on retry failure)
+    // Cleanup temp directory
     if (tempDir) {
       try {
         await rm(tempDir, { recursive: true, force: true });

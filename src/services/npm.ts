@@ -1,6 +1,7 @@
 import registryFetch from 'npm-registry-fetch';
 import pickManifest, { type Packument } from 'npm-pick-manifest';
 import type { PackageSnapshot, PackageIdentifier } from '../types.js';
+import { getErrorMessage } from '../utils/errors.js';
 
 type Maintainer = string | { name?: string; email?: string };
 
@@ -116,7 +117,6 @@ export async function getPackageMetadata(
       }
     }
 
-    const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to fetch package metadata: ${message}`);
+    throw new Error(`Failed to fetch package metadata: ${getErrorMessage(error)}`);
   }
 }

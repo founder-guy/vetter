@@ -18,6 +18,7 @@ import type { AnalysisResult, InstallOptions, Workspace } from './types.js';
 import { isGradeAtOrBelowThreshold, isValidGrade } from './grading.js';
 import { loadCache, saveCache, formatAge, clearCache, getCacheInfo } from './cache.js';
 import { prepareWorkspace } from './services/workspace.js';
+import { getErrorMessage } from './utils/errors.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -283,8 +284,7 @@ program
         process.exit(0);
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error(chalk.red(`\nError: ${message}\n`));
+      console.error(chalk.red(`\nError: ${getErrorMessage(error)}\n`));
       process.exit(1);
     }
   });
@@ -309,8 +309,7 @@ program
         process.exit(1);
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error(chalk.red(`\nError: ${message}\n`));
+      console.error(chalk.red(`\nError: ${getErrorMessage(error)}\n`));
       process.exit(1);
     }
   });

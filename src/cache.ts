@@ -3,6 +3,7 @@ import { promises as fs } from 'fs';
 import { join } from 'path';
 import { homedir, tmpdir } from 'os';
 import type { AnalysisResult } from './types.js';
+import { getErrorMessage } from './utils/errors.js';
 
 // Constants
 const CACHE_VERSION = 3; // Bumped for dependencyBreakdown field addition
@@ -83,7 +84,7 @@ async function ensureCacheDir(): Promise<void> {
     await fs.mkdir(cacheDir, { recursive: true, mode: 0o755 });
   } catch (error) {
     // Log to stderr but don't fail - graceful degradation
-    console.error(`[vetter] Warning: Failed to create cache directory: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(`[vetter] Warning: Failed to create cache directory: ${getErrorMessage(error)}`);
   }
 }
 
@@ -216,7 +217,7 @@ export async function saveCache(
     await pruneIfOversized();
   } catch (error) {
     // Log to stderr but don't fail the analysis
-    console.error(`[vetter] Warning: Failed to save cache: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(`[vetter] Warning: Failed to save cache: ${getErrorMessage(error)}`);
   }
 }
 
@@ -327,7 +328,7 @@ export async function clearCache(): Promise<void> {
     }
 
     // Log other errors but don't throw
-    console.error(`[vetter] Warning: Failed to clear cache: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(`[vetter] Warning: Failed to clear cache: ${getErrorMessage(error)}`);
   }
 }
 

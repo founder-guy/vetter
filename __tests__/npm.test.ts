@@ -214,4 +214,35 @@ describe('getPackageMetadata', () => {
       getPackageMetadata('some-package')
     ).rejects.toThrow('Cannot reach npm registry');
   });
+
+  it('should pass custom registry to registryFetch', async () => {
+    const mockPackument = createMockPackument('lodash', {
+      '4.17.21': { version: '4.17.21' },
+    });
+
+    vi.mocked(registryFetch.json).mockResolvedValue(mockPackument);
+
+    await getPackageMetadata('lodash', undefined, {
+      registry: 'https://custom-registry.example.com',
+    });
+
+    expect(registryFetch.json).toHaveBeenCalledWith('/lodash', {
+      registry: 'https://custom-registry.example.com',
+      preferOnline: true,
+    });
+  });
+
+  it('should use default registry when no registry option provided', async () => {
+    const mockPackument = createMockPackument('lodash', {
+      '4.17.21': { version: '4.17.21' },
+    });
+
+    vi.mocked(registryFetch.json).mockResolvedValue(mockPackument);
+
+    await getPackageMetadata('lodash');
+
+    expect(registryFetch.json).toHaveBeenCalledWith('/lodash', {
+      preferOnline: true,
+    });
+  });
 });

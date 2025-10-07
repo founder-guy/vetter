@@ -41,6 +41,7 @@ program
   .option('--refresh', 'Force re-analysis and update cache')
   .option('--fail-on-grade <grade>', 'Exit with code 1 if package grade is at or below threshold (A-F)')
   .option('--deps', 'Show detailed dependency breakdown (top 10 by sub-tree size)')
+  .option('--registry <url>', 'Use custom npm registry (defaults to public npm)')
   .action(async (packageString: string, options: InstallOptions) => {
     // Validate --fail-on-grade option
     if (options.failOnGrade) {
@@ -64,7 +65,7 @@ program
         : null;
       let packageSnapshot;
       try {
-        packageSnapshot = await getPackageMetadata(name, version);
+        packageSnapshot = await getPackageMetadata(name, version, { registry: options.registry });
         if (metadataSpinner) {
           metadataSpinner.succeed(
             `Found ${packageSnapshot.name}@${packageSnapshot.version}`
@@ -115,7 +116,11 @@ program
           : null;
 
         try {
-          workspace = await prepareWorkspace(packageSnapshot.name, packageSnapshot.version);
+          workspace = await prepareWorkspace(
+            packageSnapshot.name,
+            packageSnapshot.version,
+            { registry: options.registry }
+          );
           if (workspaceSpinner) {
             workspaceSpinner.succeed('Workspace prepared');
           }
@@ -136,7 +141,7 @@ program
             securityAnalysis = await analyzePackageSecurity(
               packageSnapshot.name,
               packageSnapshot.version,
-              { workspace }
+              { workspace, registry: options.registry }
             );
             if (auditSpinner) {
               if (securityAnalysis.status === 'clean') {
@@ -162,7 +167,10 @@ program
             : null;
           let metrics;
           try {
-            metrics = await calculateMetrics(packageSnapshot, { workspace });
+            metrics = await calculateMetrics(packageSnapshot, {
+              workspace,
+              registry: options.registry,
+            });
             if (metricsSpinner) {
               metricsSpinner.succeed('Package metrics analyzed');
             }

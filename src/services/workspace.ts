@@ -31,11 +31,13 @@ const execFileAsync = promisify(execFile);
  *
  * @param packageName - Package name (e.g., 'lodash' or '@babel/core')
  * @param version - Version to install (e.g., '4.17.21' or 'latest')
+ * @param options - Optional registry configuration
  * @returns Workspace with dir, optional lockfile, cleanup function, optional installError
  */
 export async function prepareWorkspace(
   packageName: string,
-  version: string
+  version: string,
+  options?: import('../types.js').RegistryOptions
 ): Promise<Workspace> {
   // Create temp directory
   const tmpDir = await mkdtemp(join(tmpdir(), 'vetter-'));
@@ -64,14 +66,17 @@ export async function prepareWorkspace(
   let lockfile: PackageLockfileData | undefined;
 
   try {
-    await execFileAsync(
-      'npm',
-      ['install', '--package-lock-only', '--ignore-scripts', '--no-audit'],
-      {
-        cwd: tmpDir,
-        timeout: 60000, // 60s timeout (matches current services)
-      }
-    );
+    const npmArgs = ['install', '--package-lock-only', '--ignore-scripts', '--no-audit'];
+
+    // Conditionally append --registry flag
+    if (options?.registry?.trim()) {
+      npmArgs.push('--registry', options.registry.trim());
+    }
+
+    await execFileAsync('npm', npmArgs, {
+      cwd: tmpDir,
+      timeout: 60000, // 60s timeout (matches current services)
+    });
 
     // Try to parse lockfile (only if it exists)
     try {

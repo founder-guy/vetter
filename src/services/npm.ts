@@ -56,7 +56,8 @@ export function parsePackageString(input: string): PackageIdentifier {
  */
 export async function getPackageMetadata(
   name: string,
-  version?: string
+  version?: string,
+  options?: import('../types.js').RegistryOptions
 ): Promise<PackageSnapshot> {
   try {
     // Encode package name for URL, preserving / in scoped packages
@@ -65,6 +66,7 @@ export async function getPackageMetadata(
     // Fetch full packument (all versions metadata)
     const packument = (await registryFetch.json(`/${encodedName}`, {
       preferOnline: true,
+      ...(options?.registry ? { registry: options.registry } : {}),
     })) as Packument;
 
     // Resolve version/tag/semver range to specific version

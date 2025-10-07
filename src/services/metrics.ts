@@ -18,12 +18,14 @@ const execFileAsync = promisify(execFile);
  * @param packageName - Package name
  * @param version - Package version
  * @param lockfile - Optional pre-parsed lockfile (from shared workspace)
+ * @param options - Optional registry configuration
  * @returns Number of dependencies, or -1 on failure
  */
 async function countDependencies(
   packageName: string,
   version: string,
-  lockfile?: PackageLockfileData
+  lockfile?: PackageLockfileData,
+  options?: import('../types.js').RegistryOptions
 ): Promise<number> {
   // If lockfile provided, use it directly
   if (lockfile) {
@@ -55,14 +57,17 @@ async function countDependencies(
     await writeFile(join(tempDir, 'package.json'), JSON.stringify(pkgJson, null, 2));
 
     // Generate package-lock.json
-    await execFileAsync(
-      'npm',
-      ['install', '--package-lock-only', '--ignore-scripts', '--no-audit'],
-      {
-        cwd: tempDir,
-        timeout: 60000,
-      }
-    );
+    const npmArgs = ['install', '--package-lock-only', '--ignore-scripts', '--no-audit'];
+
+    // Conditionally append --registry flag
+    if (options?.registry?.trim()) {
+      npmArgs.push('--registry', options.registry.trim());
+    }
+
+    await execFileAsync('npm', npmArgs, {
+      cwd: tempDir,
+      timeout: 60000,
+    });
 
     // Read and parse package-lock.json
     const lockContent = await readFile(join(tempDir, 'package-lock.json'), 'utf-8');
@@ -115,7 +120,8 @@ export async function calculateMetrics(
   const totalDependencyCount = await countDependencies(
     pkg.name,
     pkg.version,
-    options?.workspace?.lockfile
+    options?.workspace?.lockfile,
+    options
   );
 
   // Calculate approximate size in MB

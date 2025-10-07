@@ -69,6 +69,9 @@ vetter install lodash --refresh
 
 # Show dependency breakdown (top 10 by sub-tree size)
 vetter install express --deps --no-install
+
+# Use custom/private npm registry
+vetter install lodash --registry https://registry.example.com
 ```
 
 ## Caching
@@ -281,7 +284,6 @@ src/
 
 - [ ] GitHub maintainer activity analysis
 - [ ] Suspicious package name detection
-- [ ] Alternative registries support
 - [ ] Custom license policy flags (`--allow-license`, `--deny-license`)
 
 ## FAQ
@@ -356,9 +358,21 @@ This doesn't mean single-maintainer packages are bad—many excellent libraries 
 
 ### Can Vetter scan private/scoped packages from custom registries?
 
-Currently, Vetter uses npm's default registry (`https://registry.npmjs.org`). It **can** scan scoped packages like `@babel/core` or `@types/node` as long as they're public.
+**Yes.** Vetter supports custom registries via the `--registry` flag:
 
-**Planned feature:** Support for alternative registries (e.g., GitHub Package Registry, private npm registries) by respecting `.npmrc` configuration. Track progress in the [roadmap](#roadmap).
+```bash
+# Use a custom or private npm registry
+vetter install my-package --registry https://npm.pkg.github.com
+
+# Works with scoped packages
+vetter install @myorg/private-pkg --registry https://registry.example.com
+```
+
+By default, Vetter uses npm's default registry (`https://registry.npmjs.org`). The `--registry` flag overrides this for analysis operations (metadata fetching, lockfile generation, and security audits).
+
+**Note:** The `--registry` flag only affects analysis. If you proceed with installation, it will use your npm configuration (`.npmrc`) to determine the registry. To install from a custom registry, ensure your `.npmrc` is properly configured.
+
+**Authentication:** Vetter respects your existing npm authentication. If you've configured credentials for a private registry in `~/.npmrc`, Vetter will use them automatically during analysis.
 
 ### What happens if dependency counting fails?
 

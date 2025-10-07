@@ -57,6 +57,20 @@ The `--deps` flag reveals which packages pull in the most transitive dependencie
 - **Works with all packages**: Supports both lockfile v1 and v2/v3 formats
 - **Top 10 only**: Shows the biggest contributors to dependency bloat
 
+### Custom Registries
+```bash
+# Use a custom or private npm registry
+vetter install my-package --registry https://npm.pkg.github.com --no-install
+
+# Works with scoped packages
+vetter install @myorg/private-pkg --registry https://registry.example.com --no-install
+
+# Combine with other flags
+vetter install @company/internal --registry https://npm.company.com --json --no-install
+```
+
+**Note**: The `--registry` flag affects analysis only (metadata, lockfile, security audit). If you proceed with installation, npm will use your `.npmrc` configuration. Authentication is handled via existing npm credentials in `~/.npmrc`.
+
 ### Caching
 ```bash
 # Normal usage: cache is used automatically (7-day TTL, 50MB limit)

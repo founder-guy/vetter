@@ -67,7 +67,14 @@ export async function analyzePackageSecurity(
 
     // Run npm audit
     try {
-      const { stdout } = await execFileAsync('npm', ['audit', '--json'], {
+      const auditArgs = ['audit', '--json'];
+
+      // Conditionally append --registry flag
+      if (options?.registry?.trim()) {
+        auditArgs.push('--registry', options.registry.trim());
+      }
+
+      const { stdout } = await execFileAsync('npm', auditArgs, {
         cwd: tempDir,
         timeout: 30000,
       });

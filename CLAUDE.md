@@ -33,6 +33,9 @@ npm run format
 # Test the CLI locally
 node bin/vetter install <package> --no-install
 node bin/vetter install <package> --json --no-install
+
+# Test with custom registry
+node bin/vetter install <package> --registry https://registry.npmjs.org --no-install
 ```
 
 ## Architecture
@@ -188,10 +191,18 @@ Regex for scoped: `/^(@[^/]+\/[^@]+)(?:@(.+))?$/`
 ## Testing Strategy
 
 - **Unit tests** in `__tests__/` use mocks for deterministic, offline testing:
-  - `scoring.test.ts`: Pure functions (scoring logic, parsing)
-  - `npm.test.ts`: Mocks `npm-registry-fetch` to avoid network calls
+  - `scoring.test.ts`: Pure functions (scoring logic, grade calculation)
+  - `npm.test.ts`: Package parsing and metadata fetching (mocks `npm-registry-fetch`)
+  - `license.test.ts`: License categorization and SPDX expression parsing
+  - `breakdown.test.ts`: Dependency sub-tree analysis from lockfiles
+  - `security.test.ts`: Security audit with custom registry support
+  - `workspace.test.ts`: Workspace preparation and lockfile parsing
   - `cache.test.ts`: Cache module (load/save, TTL, invalidation, pruning) using real temp filesystem
+  - `fail-on-grade.test.ts`: Grade threshold validation and comparison logic
+- **Integration tests** verify component interactions:
   - `cache-integration.test.ts`: Cache behavior with mocked services (tests cache/refresh logic but not actual CLI flag handling)
+  - `deps-integration.test.ts`: Dependency breakdown integration with workspace and metrics
+  - `workspace-integration.test.ts`: End-to-end workspace preparation with npm install
 - **Manual testing** with real packages via CLI:
   - Healthy: `tiny-invariant`, `countup.js`
   - Bloated: `express` (68 deps)
@@ -246,11 +257,27 @@ Typical analysis times:
 
 Bottleneck: `npm audit` execution in temp workspace.
 
+## Custom Registry Support
+
+The `--registry` flag allows analysis of packages from custom/private npm registries:
+
+```bash
+vetter install @myorg/pkg --registry https://npm.pkg.github.com --no-install
+```
+
+**Implementation details:**
+- Flag is passed to all npm operations: metadata fetch (`pacote`), workspace preparation, and security audit
+- See [src/cli.ts:44](src/cli.ts#L44) for CLI flag definition
+- Registry option flows through `PrepareWorkspaceOptions`, `SecurityAnalysisOptions`, and `MetricsOptions`
+- Authentication via existing `~/.npmrc` credentials (npm handles this transparently)
+- **Important**: Installation step uses `.npmrc` config, not the `--registry` flag
+
+**Testing:**
+- Unit tests in [__tests__/security.test.ts](__tests__/security.test.ts) verify registry flag is passed to `npm audit`
+- Manual testing: `node bin/vetter install lodash --registry https://registry.npmjs.org --no-install`
+
 ## Future Extension Points
 
 The codebase is designed to support:
-- Result caching (check version in `~/.cache/vetter/`)
-- `--fail-on-grade` flag (exit non-zero if grade below threshold)
 - GitHub API integration (maintainer activity, stars)
-- License checking (add to metrics pipeline)
-- Alternative registries (parameterize registry URL in pacote calls)
+- Custom license policy flags (`--allow-license`, `--deny-license`)

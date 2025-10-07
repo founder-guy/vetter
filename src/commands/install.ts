@@ -1,4 +1,3 @@
-import ora from 'ora';
 import chalk from 'chalk';
 import { parsePackageString, getPackageMetadata } from '../services/npm.js';
 import { analyzePackageSecurity } from '../services/security.js';
@@ -8,11 +7,12 @@ import { analyzeDependencyBreakdown } from '../services/breakdown.js';
 import { calculateScore } from '../scoring.js';
 import { renderTextReport, renderJsonReport, promptInstall } from '../report.js';
 import { installPackage } from '../install.js';
-import type { AnalysisResult, InstallOptions, Workspace } from '../types.js';
+import type { AnalysisResult, InstallOptions } from '../types.js';
 import { isGradeAtOrBelowThreshold, isValidGrade } from '../grading.js';
 import { loadCache, saveCache, formatAge } from '../cache.js';
 import { prepareWorkspace } from '../services/workspace.js';
 import { getErrorMessage } from '../utils/errors.js';
+import { withSpinner } from '../utils/spinner.js';
 
 /**
  * Run the install command: analyze package and optionally install
@@ -57,25 +57,15 @@ export async function runInstallCommand(
     const showSpinners = !options.json;
 
     // Fetch metadata (always needed for cache validation)
-    const metadataSpinner = showSpinners
-      ? ora('Fetching package metadata...').start()
-      : null;
-    let packageSnapshot;
-    try {
-      packageSnapshot = await getPackageMetadata(name, version, {
-        registry: options.registry,
-      });
-      if (metadataSpinner) {
-        metadataSpinner.succeed(
-          `Found ${packageSnapshot.name}@${packageSnapshot.version}`
-        );
+    const packageSnapshot = await withSpinner(
+      showSpinners,
+      'Fetching package metadata...',
+      () => getPackageMetadata(name, version, { registry: options.registry }),
+      {
+        successMessage: (pkg) => `Found ${pkg.name}@${pkg.version}`,
+        failureMessage: 'Failed to fetch package metadata',
       }
-    } catch (error) {
-      if (metadataSpinner) {
-        metadataSpinner.fail('Failed to fetch package metadata');
-      }
-      throw error;
-    }
+    );
 
     // Try to load from cache (unless --no-cache or --refresh)
     let result: AnalysisResult | null = null;
@@ -109,74 +99,59 @@ export async function runInstallCommand(
       }
 
       // Prepare shared workspace (single npm install for both security and metrics)
-      let workspace: Workspace | null = null;
-      const workspaceSpinner = showSpinners
-        ? ora('Preparing workspace...').start()
-        : null;
-
-      try {
-        workspace = await prepareWorkspace(packageSnapshot.name, packageSnapshot.version, {
+      const workspace = await withSpinner(
+        showSpinners,
+        'Preparing workspace...',
+        () => prepareWorkspace(packageSnapshot.name, packageSnapshot.version, {
           registry: options.registry,
-        });
-        if (workspaceSpinner) {
-          workspaceSpinner.succeed('Workspace prepared');
+        }),
+        {
+          successMessage: 'Workspace prepared',
+          failureMessage: 'Failed to prepare workspace',
         }
-      } catch (error) {
-        if (workspaceSpinner) {
-          workspaceSpinner.fail('Failed to prepare workspace');
-        }
-        throw error;
-      }
+      );
 
       try {
         // Run security audit (reuses workspace)
-        const auditSpinner = showSpinners
-          ? ora('Running security audit...').start()
-          : null;
-        let securityAnalysis;
-        try {
-          securityAnalysis = await analyzePackageSecurity(
-            packageSnapshot.name,
-            packageSnapshot.version,
-            { workspace, registry: options.registry }
-          );
-          if (auditSpinner) {
-            if (securityAnalysis.status === 'clean') {
-              auditSpinner.succeed('Security audit complete - no vulnerabilities');
-            } else if (securityAnalysis.status === 'vulnerable') {
-              auditSpinner.warn(
-                `Security audit found ${securityAnalysis.vulnerabilities.total} vulnerabilities`
-              );
-            } else {
-              auditSpinner.info('Security audit status unknown');
-            }
+        const securityAnalysis = await withSpinner(
+          showSpinners,
+          'Running security audit...',
+          () =>
+            analyzePackageSecurity(packageSnapshot.name, packageSnapshot.version, {
+              workspace,
+              registry: options.registry,
+            }),
+          {
+            successMessage: (result) => {
+              if (result.status === 'clean') {
+                return 'Security audit complete - no vulnerabilities';
+              }
+              if (result.status === 'vulnerable') {
+                return {
+                  text: `Security audit found ${result.vulnerabilities.total} vulnerabilities`,
+                  symbol: 'warn',
+                };
+              }
+              return { text: 'Security audit status unknown', symbol: 'info' };
+            },
+            failureMessage: 'Security audit failed',
           }
-        } catch (error) {
-          if (auditSpinner) {
-            auditSpinner.fail('Security audit failed');
-          }
-          throw error;
-        }
+        );
 
         // Calculate metrics (reuses workspace)
-        const metricsSpinner = showSpinners
-          ? ora('Analyzing package metrics...').start()
-          : null;
-        let metrics;
-        try {
-          metrics = await calculateMetrics(packageSnapshot, {
-            workspace,
-            registry: options.registry,
-          });
-          if (metricsSpinner) {
-            metricsSpinner.succeed('Package metrics analyzed');
+        const metrics = await withSpinner(
+          showSpinners,
+          'Analyzing package metrics...',
+          () =>
+            calculateMetrics(packageSnapshot, {
+              workspace,
+              registry: options.registry,
+            }),
+          {
+            successMessage: 'Package metrics analyzed',
+            failureMessage: 'Failed to analyze metrics',
           }
-        } catch (error) {
-          if (metricsSpinner) {
-            metricsSpinner.fail('Failed to analyze metrics');
-          }
-          throw error;
-        }
+        );
 
         // Analyze license
         const licenseInfo = analyzeLicense(packageSnapshot.license);

@@ -13,6 +13,7 @@ vi.mock('../src/install.js');
 vi.mock('../src/cache.js');
 vi.mock('../src/services/workspace.js');
 vi.mock('../src/grading.js');
+vi.mock('../src/utils/spinner.js');
 
 import { parsePackageString, getPackageMetadata } from '../src/services/npm.js';
 import { analyzePackageSecurity } from '../src/services/security.js';
@@ -25,6 +26,7 @@ import { installPackage } from '../src/install.js';
 import { loadCache, saveCache } from '../src/cache.js';
 import { prepareWorkspace } from '../src/services/workspace.js';
 import { isValidGrade, isGradeAtOrBelowThreshold } from '../src/grading.js';
+import { withSpinner } from '../src/utils/spinner.js';
 
 describe('runInstallCommand', () => {
   // Mock console methods to avoid test output pollution
@@ -42,6 +44,7 @@ describe('runInstallCommand', () => {
     publishedAt: new Date('2024-01-01'),
     maintainers: ['test@example.com'],
     dependencies: {},
+    devDependencies: {},
     unpackedSize: 1000000,
   };
 
@@ -67,18 +70,12 @@ describe('runInstallCommand', () => {
     },
     license: {
       category: 'permissive' as const,
-      spdx: 'MIT',
+      normalizedSpdx: 'MIT',
     },
     score: {
       grade: 'A' as const,
-      penalty: 0,
-      breakdown: {
-        security: 0,
-        maintenance: 0,
-        dependencies: 0,
-        size: 0,
-        license: 0,
-      },
+      score: 0,
+      penalties: [],
     },
   };
 
@@ -89,7 +86,7 @@ describe('runInstallCommand', () => {
     vi.mocked(loadCache).mockResolvedValue(null);
     vi.mocked(prepareWorkspace).mockResolvedValue({
       dir: '/tmp/test',
-      lockfile: { name: 'test', version: '1.0.0', lockfileVersion: 3, packages: {} },
+      lockfile: { lockfileVersion: 3, packages: {} },
       cleanup: vi.fn().mockResolvedValue(undefined),
     });
     vi.mocked(analyzePackageSecurity).mockResolvedValue(mockAnalysisResult.security);
@@ -100,6 +97,10 @@ describe('runInstallCommand', () => {
     vi.mocked(saveCache).mockResolvedValue(undefined);
     vi.mocked(renderTextReport).mockReturnValue('Mock report');
     vi.mocked(renderJsonReport).mockReturnValue('{}');
+    // Mock withSpinner to just execute the operation (no spinner output)
+    vi.mocked(withSpinner).mockImplementation(async (_enabled, _label, operation) => {
+      return await operation();
+    });
     vi.mocked(promptInstall).mockResolvedValue(false);
   });
 
@@ -107,7 +108,7 @@ describe('runInstallCommand', () => {
     vi.mocked(isValidGrade).mockReturnValue(false);
 
     const exitCode = await runInstallCommand('test-package', {
-      failOnGrade: 'Z' as any,
+      failOnGrade: 'Z' as 'A', // Invalid grade for testing error handling
       json: false,
     });
 
@@ -122,7 +123,7 @@ describe('runInstallCommand', () => {
     vi.mocked(isGradeAtOrBelowThreshold).mockReturnValue(true);
 
     // Mock package with grade F
-    const failedScore = { ...mockAnalysisResult.score, grade: 'F' as const };
+    const failedScore = { grade: 'F' as const, score: 100, penalties: [] };
     vi.mocked(calculateScore).mockReturnValue(failedScore);
 
     const exitCode = await runInstallCommand('test-package', {

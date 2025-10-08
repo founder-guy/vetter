@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 /**
  * Proxy npm install command and stream output to user
  *
- * **Timeout:** 5-minute limit to prevent indefinite hangs
+ * **Timeout:** 5-minute limit with graceful SIGTERM → SIGKILL escalation
  * **Registry:** Supports custom registry via optional parameter
  *
  * @param packageSpec - Package specifier (e.g., 'lodash@4.17.21')
@@ -21,19 +21,32 @@ export async function installPackage(packageSpec: string, registry?: string): Pr
       stdio: 'inherit',
     });
 
-    // 5-minute timeout for user-facing install
-    const timeout = setTimeout(() => {
+    // 5-minute timeout with graceful SIGTERM → SIGKILL escalation
+    let timeout: NodeJS.Timeout;
+    let killTimeout: NodeJS.Timeout | undefined;
+
+    timeout = setTimeout(() => {
       npmProcess.kill('SIGTERM');
+
+      // Force kill if process hasn't exited after 5-second grace period
+      killTimeout = setTimeout(() => {
+        if (npmProcess.exitCode === null) {
+          npmProcess.kill('SIGKILL');
+        }
+      }, 5000);
+
       reject(new Error('Installation timed out after 5 minutes'));
     }, 300000);
 
     npmProcess.on('close', (code) => {
       clearTimeout(timeout);
+      if (killTimeout) clearTimeout(killTimeout);
       resolve(code ?? 1);
     });
 
     npmProcess.on('error', (error) => {
       clearTimeout(timeout);
+      if (killTimeout) clearTimeout(killTimeout);
       reject(error);
     });
   });

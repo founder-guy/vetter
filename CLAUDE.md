@@ -231,7 +231,7 @@ When adding new scoring rules, always add corresponding test in `__tests__/scori
 3. **Wrong Commander property**: Use `options.install !== false`, not `options.noInstall`
 4. **Blocking on audit**: Large packages (500+ deps) can take 60-90s to analyze
 5. **Temp dir cleanup**: Always use try/finally to ensure cleanup, but ignore cleanup errors
-6. **npm execution**: Never use `shell: true` with spawn (security risk); always add timeouts to prevent hangs
+6. **npm execution**: Never use `shell: true` with spawn (security risk); always add timeouts to prevent hangs; use SIGTERM → SIGKILL escalation for graceful shutdown
 7. **Commander exit behavior**: Use `program.outputHelp()` instead of `program.help()` to avoid implicit `process.exit(0)`. Set `process.exitCode` in action handlers, exit once at the end
 
 ## CLI Architecture

@@ -32,10 +32,9 @@ export async function installPackage(packageSpec: string, registry?: string): Pr
       killTimeout = setTimeout(() => {
         if (npmProcess.exitCode === null) {
           npmProcess.kill('SIGKILL');
+          reject(new Error('Installation timed out after 5 minutes'));
         }
       }, 5000);
-
-      reject(new Error('Installation timed out after 5 minutes'));
     }, 300000);
 
     npmProcess.on('close', (code) => {

@@ -160,7 +160,7 @@ Grades: `A (0-19) → B (20-39) → C (40-59) → D (60-79) → E (80-99) → F 
 
 ### 1. JSON Output Purity
 When `--json` is enabled:
-- **NO** spinners to stdout (check `!options.json` before creating `ora()`)
+- **NO** spinners to stdout (check `!options.json` before creating spinner)
 - Warnings/errors go to **stderr only** (use `console.error()`)
 - Stdout contains **only** the JSON blob
 

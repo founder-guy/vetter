@@ -1,4 +1,6 @@
-import ora, { Ora } from 'ora';
+import { createSpinner } from 'nanospinner';
+
+type Spinner = ReturnType<typeof createSpinner>;
 
 /**
  * Success message configuration for spinner
@@ -91,7 +93,7 @@ export async function withSpinner<T>(
   operation: () => Promise<T>,
   options?: WithSpinnerOptions<T>
 ): Promise<T> {
-  const spinner: Ora | null = enabled ? ora(loadingMessage).start() : null;
+  const spinner: Spinner | null = enabled ? createSpinner(loadingMessage).start() : null;
 
   try {
     const result = await operation();
@@ -108,15 +110,15 @@ export async function withSpinner<T>(
 
       // Apply success message with appropriate symbol
       if (typeof successMsg === 'string') {
-        spinner.succeed(successMsg);
+        spinner.success({ text: successMsg });
       } else {
         const symbol = successMsg.symbol ?? 'succeed';
         if (symbol === 'succeed') {
-          spinner.succeed(successMsg.text);
+          spinner.success({ text: successMsg.text });
         } else if (symbol === 'warn') {
-          spinner.warn(successMsg.text);
+          spinner.warn({ text: successMsg.text });
         } else {
-          spinner.info(successMsg.text);
+          spinner.info({ text: successMsg.text });
         }
       }
     }
@@ -125,7 +127,7 @@ export async function withSpinner<T>(
   } catch (error) {
     if (spinner) {
       const failMsg = options?.failureMessage ?? `${loadingMessage} failed`;
-      spinner.fail(failMsg);
+      spinner.error({ text: failMsg });
     }
     throw error;
   }

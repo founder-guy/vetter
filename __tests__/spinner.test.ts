@@ -1,17 +1,17 @@
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
-import ora, { Ora } from 'ora';
+import { createSpinner } from 'nanospinner';
 import { withSpinner } from '../src/utils/spinner.js';
 
-// Mock ora
-vi.mock('ora');
+// Mock nanospinner
+vi.mock('nanospinner');
 
 describe('withSpinner', () => {
   let mockSpinner: {
     start: Mock;
-    succeed: Mock;
+    success: Mock;
     warn: Mock;
     info: Mock;
-    fail: Mock;
+    error: Mock;
   };
 
   beforeEach(() => {
@@ -20,14 +20,14 @@ describe('withSpinner', () => {
 
     mockSpinner = {
       start: vi.fn().mockReturnThis(),
-      succeed: vi.fn(),
+      success: vi.fn(),
       warn: vi.fn(),
       info: vi.fn(),
-      fail: vi.fn(),
+      error: vi.fn(),
     };
 
-    // Reset ora mock
-    vi.mocked(ora).mockReturnValue(mockSpinner as unknown as Ora);
+    // Reset nanospinner mock
+    vi.mocked(createSpinner).mockReturnValue(mockSpinner as any);
   });
 
   describe('success cases', () => {
@@ -42,9 +42,9 @@ describe('withSpinner', () => {
 
       expect(result).toBe('success');
       expect(operation).toHaveBeenCalledOnce();
-      expect(ora).toHaveBeenCalledWith('Loading...');
+      expect(createSpinner).toHaveBeenCalledWith('Loading...');
       expect(mockSpinner.start).toHaveBeenCalledOnce();
-      expect(mockSpinner.succeed).toHaveBeenCalledWith('Loading...');
+      expect(mockSpinner.success).toHaveBeenCalledWith({ text: 'Loading...' });
     });
 
     it('should execute operation without spinner when disabled', async () => {
@@ -58,8 +58,8 @@ describe('withSpinner', () => {
 
       expect(result).toBe('success');
       expect(operation).toHaveBeenCalledOnce();
-      expect(ora).not.toHaveBeenCalled();
-      expect(mockSpinner.succeed).not.toHaveBeenCalled();
+      expect(createSpinner).not.toHaveBeenCalled();
+      expect(mockSpinner.success).not.toHaveBeenCalled();
     });
 
     it('should use custom success message (string)', async () => {
@@ -72,7 +72,7 @@ describe('withSpinner', () => {
         { successMessage: 'Done!' }
       );
 
-      expect(mockSpinner.succeed).toHaveBeenCalledWith('Done!');
+      expect(mockSpinner.success).toHaveBeenCalledWith({ text: 'Done!' });
     });
 
     it('should use result-dependent success message (string)', async () => {
@@ -83,11 +83,11 @@ describe('withSpinner', () => {
         'Counting...',
         operation,
         {
-          successMessage: (result) => `Found ${result.count} items`
+          successMessage: (result: { count: number }) => `Found ${result.count} items`
         }
       );
 
-      expect(mockSpinner.succeed).toHaveBeenCalledWith('Found 42 items');
+      expect(mockSpinner.success).toHaveBeenCalledWith({ text: 'Found 42 items' });
     });
 
     it('should use result-dependent success message with warn symbol', async () => {
@@ -98,15 +98,15 @@ describe('withSpinner', () => {
         'Checking...',
         operation,
         {
-          successMessage: (result) => ({
+          successMessage: (result: { status: string }) => ({
             text: `Status: ${result.status}`,
-            symbol: 'warn'
+            symbol: 'warn' as const
           })
         }
       );
 
-      expect(mockSpinner.warn).toHaveBeenCalledWith('Status: warning');
-      expect(mockSpinner.succeed).not.toHaveBeenCalled();
+      expect(mockSpinner.warn).toHaveBeenCalledWith({ text: 'Status: warning' });
+      expect(mockSpinner.success).not.toHaveBeenCalled();
     });
 
     it('should use result-dependent success message with info symbol', async () => {
@@ -117,15 +117,15 @@ describe('withSpinner', () => {
         'Checking...',
         operation,
         {
-          successMessage: (result) => ({
+          successMessage: (result: { status: string }) => ({
             text: `Status: ${result.status}`,
-            symbol: 'info'
+            symbol: 'info' as const
           })
         }
       );
 
-      expect(mockSpinner.info).toHaveBeenCalledWith('Status: unknown');
-      expect(mockSpinner.succeed).not.toHaveBeenCalled();
+      expect(mockSpinner.info).toHaveBeenCalledWith({ text: 'Status: unknown' });
+      expect(mockSpinner.success).not.toHaveBeenCalled();
     });
 
     it('should handle object success message with explicit succeed symbol', async () => {
@@ -136,11 +136,11 @@ describe('withSpinner', () => {
         'Loading...',
         operation,
         {
-          successMessage: () => ({ text: 'Complete', symbol: 'succeed' })
+          successMessage: () => ({ text: 'Complete', symbol: 'succeed' as const })
         }
       );
 
-      expect(mockSpinner.succeed).toHaveBeenCalledWith('Complete');
+      expect(mockSpinner.success).toHaveBeenCalledWith({ text: 'Complete' });
     });
   });
 
@@ -153,8 +153,8 @@ describe('withSpinner', () => {
         withSpinner(true, 'Loading...', operation)
       ).rejects.toThrow('Operation failed');
 
-      expect(mockSpinner.fail).toHaveBeenCalledWith('Loading... failed');
-      expect(mockSpinner.succeed).not.toHaveBeenCalled();
+      expect(mockSpinner.error).toHaveBeenCalledWith({ text: 'Loading... failed' });
+      expect(mockSpinner.success).not.toHaveBeenCalled();
     });
 
     it('should use custom failure message', async () => {
@@ -170,7 +170,7 @@ describe('withSpinner', () => {
         )
       ).rejects.toThrow('Network error');
 
-      expect(mockSpinner.fail).toHaveBeenCalledWith('Connection lost');
+      expect(mockSpinner.error).toHaveBeenCalledWith({ text: 'Connection lost' });
     });
 
     it('should rethrow error without spinner when disabled', async () => {
@@ -181,8 +181,8 @@ describe('withSpinner', () => {
         withSpinner(false, 'Loading...', operation)
       ).rejects.toThrow('Operation failed');
 
-      expect(ora).not.toHaveBeenCalled();
-      expect(mockSpinner.fail).not.toHaveBeenCalled();
+      expect(createSpinner).not.toHaveBeenCalled();
+      expect(mockSpinner.error).not.toHaveBeenCalled();
     });
   });
 
@@ -196,12 +196,12 @@ describe('withSpinner', () => {
         'Fetching package metadata...',
         operation,
         {
-          successMessage: (pkg) => `Found ${pkg.name}@${pkg.version}`
+          successMessage: (pkg: { name: string; version: string }) => `Found ${pkg.name}@${pkg.version}`
         }
       );
 
       expect(result).toEqual(metadata);
-      expect(mockSpinner.succeed).toHaveBeenCalledWith('Found lodash@4.17.21');
+      expect(mockSpinner.success).toHaveBeenCalledWith({ text: 'Found lodash@4.17.21' });
     });
 
     it('should handle security audit pattern (clean)', async () => {
@@ -213,7 +213,7 @@ describe('withSpinner', () => {
         'Running security audit...',
         operation,
         {
-          successMessage: (result) => {
+          successMessage: (result: typeof audit) => {
             if (result.status === 'clean') {
               return 'Security audit complete - no vulnerabilities';
             }
@@ -222,9 +222,9 @@ describe('withSpinner', () => {
         }
       );
 
-      expect(mockSpinner.succeed).toHaveBeenCalledWith(
-        'Security audit complete - no vulnerabilities'
-      );
+      expect(mockSpinner.success).toHaveBeenCalledWith({
+        text: 'Security audit complete - no vulnerabilities'
+      });
     });
 
     it('should handle security audit pattern (vulnerable)', async () => {
@@ -236,7 +236,7 @@ describe('withSpinner', () => {
         'Running security audit...',
         operation,
         {
-          successMessage: (result) => {
+          successMessage: (result: typeof audit) => {
             if (result.status === 'vulnerable') {
               return {
                 text: `Security audit found ${result.vulnerabilities.total} vulnerabilities`,
@@ -248,9 +248,9 @@ describe('withSpinner', () => {
         }
       );
 
-      expect(mockSpinner.warn).toHaveBeenCalledWith(
-        'Security audit found 5 vulnerabilities'
-      );
+      expect(mockSpinner.warn).toHaveBeenCalledWith({
+        text: 'Security audit found 5 vulnerabilities'
+      });
     });
 
     it('should handle security audit pattern (unknown)', async () => {
@@ -262,7 +262,7 @@ describe('withSpinner', () => {
         'Running security audit...',
         operation,
         {
-          successMessage: (result) => {
+          successMessage: (result: typeof audit) => {
             if (result.status === 'unknown') {
               return { text: 'Security audit status unknown', symbol: 'info' as const };
             }
@@ -271,7 +271,7 @@ describe('withSpinner', () => {
         }
       );
 
-      expect(mockSpinner.info).toHaveBeenCalledWith('Security audit status unknown');
+      expect(mockSpinner.info).toHaveBeenCalledWith({ text: 'Security audit status unknown' });
     });
 
     it('should handle workspace preparation pattern', async () => {
@@ -288,7 +288,7 @@ describe('withSpinner', () => {
         }
       );
 
-      expect(mockSpinner.succeed).toHaveBeenCalledWith('Workspace prepared');
+      expect(mockSpinner.success).toHaveBeenCalledWith({ text: 'Workspace prepared' });
     });
   });
 });

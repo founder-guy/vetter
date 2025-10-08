@@ -341,7 +341,7 @@ This is a fundamental limitation of npm's audit mechanism. Vetter shows a spinne
 
 ### Why does Vetter give itself different grades depending on where I run it?
 
-When you run `npx vetter install vetter`, you're scanning the **published npm package**, which only includes runtime dependencies (commander, ora, chalk, npm-registry-fetch, npm-pick-manifest, zod). This typically results in a **B or C grade** with ~15-20 total dependencies.
+When you run `npx vetter install vetter`, you're scanning the **published npm package**, which only includes runtime dependencies (commander, nanospinner, chalk, npm-registry-fetch, npm-pick-manifest, zod). This typically results in a **B or C grade** with ~15-20 total dependencies.
 
 When you run Vetter **inside the cloned repository** (e.g., `node bin/vetter install vetter`), it scans the local development environment, which includes **devDependencies** like TypeScript, Vitest, ESLint, tsup, and their transitive dependencies. This results in a **D grade** with 100+ total dependencies.
 

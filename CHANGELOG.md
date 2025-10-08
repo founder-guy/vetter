@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/founder-guy/vetter/compare/v1.0.0...v1.0.1) (2025-10-08)
+
+
+### Bug Fixes
+
+* increase timeouts for large packages with 1000+ dependencies ([2649682](https://github.com/founder-guy/vetter/commit/2649682222ebae5b1a232dd7461b3e4604252132))
+
 # [1.0.0](https://github.com/founder-guy/vetter/compare/v0.5.2...v1.0.0) (2025-10-08)
 
 

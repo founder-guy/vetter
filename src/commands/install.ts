@@ -246,7 +246,8 @@ export async function runInstallCommand(
       if (shouldInstall) {
         console.log(chalk.bold('\nInstalling package...\n'));
         const exitCode = await installPackage(
-          `${result.package.name}@${result.package.version}`
+          `${result.package.name}@${result.package.version}`,
+          options.registry
         );
         return exitCode;
       } else {

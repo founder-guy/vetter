@@ -46,7 +46,7 @@ node bin/vetter install <package> --registry https://registry.npmjs.org --no-ins
 2. **Package Parsing** ([src/services/npm.ts](src/services/npm.ts)) → Handles `pkg`, `@scope/pkg`, `pkg@version` formats
 3. **Workspace Preparation** ([src/services/workspace.ts](src/services/workspace.ts)) → Creates shared temp directory, runs single `npm install --package-lock-only`, parses lockfile
 4. **Analysis** (reuses shared workspace):
-   - **Metadata Fetch** ([src/services/npm.ts](src/services/npm.ts)) → Uses `pacote` to get registry data
+   - **Metadata Fetch** ([src/services/npm.ts](src/services/npm.ts)) → Uses `npm-registry-fetch` to get registry data
    - **Security Audit** ([src/services/security.ts](src/services/security.ts)) → Runs `npm audit` in shared workspace
    - **Metrics Calculation** ([src/services/metrics.ts](src/services/metrics.ts)) → Uses pre-parsed lockfile from workspace
 5. **Scoring** ([src/scoring.ts](src/scoring.ts)) → Pure function: applies penalty rules to generate A-F grade
@@ -328,11 +328,10 @@ vetter install @myorg/pkg --registry https://npm.pkg.github.com --no-install
 ```
 
 **Implementation details:**
-- Flag is passed to all npm operations: metadata fetch (`pacote`), workspace preparation, and security audit
+- Flag is passed to all npm operations: metadata fetch (`npm-registry-fetch`), workspace preparation, security audit, and user installation
 - See [src/cli.ts:44](src/cli.ts#L44) for CLI flag definition
-- Registry option flows through `PrepareWorkspaceOptions`, `SecurityAnalysisOptions`, and `MetricsOptions`
+- Registry option flows through all operations: metadata fetch, workspace preparation, security audit, and user installation
 - Authentication via existing `~/.npmrc` credentials (npm handles this transparently)
-- **Important**: Installation step uses `.npmrc` config, not the `--registry` flag
 
 **Testing:**
 - Unit tests in [__tests__/security.test.ts](__tests__/security.test.ts) verify registry flag is passed to `npm audit`

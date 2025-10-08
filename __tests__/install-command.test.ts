@@ -232,7 +232,7 @@ describe('runInstallCommand', () => {
 
     expect(exitCode).toBe(42);
     expect(promptInstall).toHaveBeenCalled();
-    expect(installPackage).toHaveBeenCalledWith('test-package@1.0.0');
+    expect(installPackage).toHaveBeenCalledWith('test-package@1.0.0', undefined);
   });
 
   it('should skip cache when --no-cache flag is set', async () => {
@@ -283,6 +283,20 @@ describe('runInstallCommand', () => {
       '1.0.0',
       expect.objectContaining({ registry })
     );
+  });
+
+  it('should forward registry option to installPackage when user accepts', async () => {
+    const registry = 'https://custom.registry.com';
+    vi.mocked(promptInstall).mockResolvedValue(true);
+    vi.mocked(installPackage).mockResolvedValue(0);
+
+    await runInstallCommand('test-package', {
+      registry,
+      install: true,
+      json: false,
+    });
+
+    expect(installPackage).toHaveBeenCalledWith('test-package@1.0.0', registry);
   });
 
   it('should cleanup workspace even when analysis fails', async () => {

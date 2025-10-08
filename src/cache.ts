@@ -156,7 +156,7 @@ export async function loadCache(
       analysis: entry.analysis,
       cacheAgeSeconds,
     };
-  } catch (error) {
+  } catch {
     // Any error (file not found, parse error, etc.) = cache miss
     return null;
   }
@@ -200,7 +200,7 @@ export async function saveCache(
 
     try {
       await fs.rename(tmpPath, cachePath);
-    } catch (error) {
+    } catch {
       // Rename failed, try one more time (Windows NTFS sometimes fails on first try)
       try {
         // Clean up destination if it exists
@@ -253,7 +253,7 @@ async function getCacheSizeAndStats(): Promise<{
     const totalSize = fileStats.reduce((sum, file) => sum + file.size, 0);
 
     return { totalSize, files: fileStats };
-  } catch (error) {
+  } catch {
     return { totalSize: 0, files: [] };
   }
 }
@@ -296,7 +296,7 @@ async function pruneIfOversized(): Promise<void> {
         `[vetter] Cache pruned: removed ${deletedCount} old entries (${Math.round((totalSize - currentSize) / 1024)}KB freed)`
       );
     }
-  } catch (error) {
+  } catch {
     // Ignore pruning errors - not critical
   }
 }
@@ -347,7 +347,7 @@ export async function getCacheInfo(): Promise<{
       sizeMB: parseFloat((totalSize / (1024 * 1024)).toFixed(2)),
       count: files.length,
     };
-  } catch (error) {
+  } catch {
     // If directory doesn't exist or can't be read, return zero values
     return {
       path: cacheDir,

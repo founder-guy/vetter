@@ -69,7 +69,7 @@ describe('Cache', () => {
     // Clean up temp directory
     try {
       await fs.rm(testCacheDir, { recursive: true, force: true });
-    } catch (error) {
+    } catch {
       // Ignore cleanup errors
     }
     delete process.env.VETTER_CACHE_DIR;

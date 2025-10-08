@@ -27,6 +27,7 @@ describe('withSpinner', () => {
     };
 
     // Reset nanospinner mock
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(createSpinner).mockReturnValue(mockSpinner as any);
   });
 

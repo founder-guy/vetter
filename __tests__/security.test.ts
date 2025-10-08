@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { analyzePackageSecurity } from '../src/services/security.js';
 
 // Track execFileAsync calls for verification
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let execFileCalls: Array<{ file: string; args: string[]; options: any }> = [];
 
 // Mock node:child_process
@@ -14,7 +15,8 @@ vi.mock('node:util', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:util')>();
   return {
     ...actual,
-    promisify: (_fn: any) => {
+    promisify: () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return async (file: string, args: string[], options: any) => {
         execFileCalls.push({ file, args, options });
 

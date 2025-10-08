@@ -5,10 +5,6 @@ import { tmpdir } from 'os';
 
 // Mock the services to avoid actual npm calls
 vi.mock('../src/services/npm.js', () => ({
-  parsePackageString: vi.fn((pkg: string) => {
-    const [name, version] = pkg.split('@');
-    return { name: name || pkg, version };
-  }),
   getPackageMetadata: vi.fn(async () => ({
     name: 'test-package',
     version: '1.0.0',
@@ -44,7 +40,7 @@ vi.mock('../src/services/metrics.js', () => ({
   })),
 }));
 
-import { parsePackageString, getPackageMetadata } from '../src/services/npm.js';
+import { getPackageMetadata } from '../src/services/npm.js';
 import { analyzePackageSecurity } from '../src/services/security.js';
 import { calculateMetrics } from '../src/services/metrics.js';
 import { loadCache, saveCache } from '../src/cache.js';
@@ -65,7 +61,7 @@ describe('Cache Integration with Services', () => {
     // Clean up
     try {
       await fs.rm(testCacheDir, { recursive: true, force: true });
-    } catch (error) {
+    } catch {
       // Ignore
     }
     delete process.env.VETTER_CACHE_DIR;
@@ -73,7 +69,6 @@ describe('Cache Integration with Services', () => {
 
   describe('cache bypass behavior', () => {
     it('should skip cache load when cache is disabled', async () => {
-      const packageString = 'test-package@1.0.0';
       const options = { cache: false, json: false, install: false };
 
       // Pre-populate cache

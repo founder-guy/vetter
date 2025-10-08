@@ -1,6 +1,6 @@
 {
   "name": "vetter",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Pre-install risk scanner for npm packages",
   "type": "module",
   "main": "dist/cli.js",

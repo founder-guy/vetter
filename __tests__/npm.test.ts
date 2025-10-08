@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { parsePackageString, getPackageMetadata } from '../src/services/npm.js';
-import type { Packument } from 'npm-pick-manifest';
+import type { Packument, Manifest } from 'npm-pick-manifest';
 
 // Mock npm-registry-fetch
 vi.mock('npm-registry-fetch', () => ({
@@ -75,9 +75,9 @@ describe('getPackageMetadata', () => {
   ): Packument => {
     const distTags: Record<string, string> = {};
     const time: Record<string, string> = {};
-    const versionsData: Record<string, any> = {};
+    const versionsData: Record<string, Manifest> = {};
 
-    Object.entries(versions).forEach(([versionKey, versionData]) => {
+    Object.entries(versions).forEach(([, versionData]) => {
       const { version, dependencies = {} } = versionData;
       versionsData[version] = {
         name,

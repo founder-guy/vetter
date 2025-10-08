@@ -21,6 +21,7 @@ vi.mock('node:util', async () => {
     ...actual,
     promisify(fn: unknown) {
       if (fn === execFileMock) return execFileAsyncMock;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return actual.promisify(fn as any);
     },
   };
@@ -49,6 +50,7 @@ describe('Shared Workspace Integration', () => {
     execFileAsyncMock.mockReset();
 
     // Default: successful install and audit
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     execFileAsyncMock.mockImplementation(async (cmd: string, args: string[], options?: any) => {
       if (cmd === 'npm' && args[0] === 'install') {
         const lockfile = {
@@ -129,7 +131,8 @@ describe('Shared Workspace Integration', () => {
 
   it('should fail fast when workspace install fails (new behavior)', async () => {
     // Mock install failure
-    execFileAsyncMock.mockImplementation(async (cmd: string, args: string[], options?: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    execFileAsyncMock.mockImplementation(async (cmd: string, args: string[], _options?: any) => {
       if (cmd === 'npm' && args[0] === 'install') {
         throw new Error('Network timeout');
       }
@@ -158,6 +161,7 @@ describe('Shared Workspace Integration', () => {
     // First call (workspace creation): install fails
     // Second call (metrics fallback): install succeeds
     let callCount = 0;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     execFileAsyncMock.mockImplementation(async (cmd: string, args: string[], options?: any) => {
       if (cmd === 'npm' && args[0] === 'install') {
         callCount++;
@@ -199,6 +203,7 @@ describe('Shared Workspace Integration', () => {
 
   it('should reuse workspace directory for both security and metrics', async () => {
     let installCallCount = 0;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     execFileAsyncMock.mockImplementation(async (cmd: string, args: string[], options?: any) => {
       if (cmd === 'npm' && args[0] === 'install') {
         installCallCount++;

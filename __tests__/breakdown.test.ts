@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { analyzeDependencyBreakdown } from '../src/services/breakdown.js';
-import type { PackageLockfileData } from '../src/types.js';
+import type { PackageLockfileData, PackageLockEntry } from '../src/types.js';
 
 describe('analyzeDependencyBreakdown', () => {
   describe('edge cases', () => {
@@ -135,16 +135,19 @@ describe('analyzeDependencyBreakdown', () => {
     });
 
     it('should limit to top 10 results', () => {
-      const packages: Record<string, any> = {
+      const packages: Record<string, PackageLockEntry> = {
         'node_modules/test-pkg': {
           version: '1.0.0',
-          dependencies: {} as Record<string, string>
+          dependencies: {}
         }
       };
 
       // Create 15 packages as direct dependencies
+      const testPkg = packages['node_modules/test-pkg'];
       for (let i = 0; i < 15; i++) {
-        packages['node_modules/test-pkg'].dependencies[`pkg${i}`] = '^1.0.0';
+        if (testPkg.dependencies) {
+          testPkg.dependencies[`pkg${i}`] = '^1.0.0';
+        }
         packages[`node_modules/pkg${i}`] = { version: '1.0.0' };
       }
 

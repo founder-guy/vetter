@@ -36,7 +36,7 @@ async function countDependencies(
         (key) => key.startsWith('node_modules/')
       ).length;
       return nodeModulesCount;
-    } catch (error) {
+    } catch {
       // Fallback to temp workspace if parsing fails
       console.warn('Could not parse provided lockfile, falling back to temp workspace');
     }

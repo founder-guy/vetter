@@ -22,10 +22,9 @@ export async function installPackage(packageSpec: string, registry?: string): Pr
     });
 
     // 5-minute timeout with graceful SIGTERM → SIGKILL escalation
-    let timeout: NodeJS.Timeout;
     let killTimeout: NodeJS.Timeout | undefined;
 
-    timeout = setTimeout(() => {
+    const timeout = setTimeout(() => {
       npmProcess.kill('SIGTERM');
 
       // Force kill if process hasn't exited after 5-second grace period

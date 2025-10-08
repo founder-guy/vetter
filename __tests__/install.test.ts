@@ -20,6 +20,7 @@ describe('installPackage', () => {
   });
 
   it('should return 0 on successful installation', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mockProcess = new EventEmitter() as any;
     mockProcess.kill = vi.fn();
     mockProcess.exitCode = null;
@@ -37,6 +38,7 @@ describe('installPackage', () => {
   });
 
   it('should return non-zero exit code on installation failure', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mockProcess = new EventEmitter() as any;
     mockProcess.kill = vi.fn();
     mockProcess.exitCode = null;
@@ -54,6 +56,7 @@ describe('installPackage', () => {
   });
 
   it('should pass registry argument when provided', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mockProcess = new EventEmitter() as any;
     mockProcess.kill = vi.fn();
     mockProcess.exitCode = null;
@@ -74,6 +77,7 @@ describe('installPackage', () => {
   });
 
   it('should resolve with exit code if process exits gracefully after SIGTERM', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mockProcess = new EventEmitter() as any;
     mockProcess.kill = vi.fn();
     mockProcess.exitCode = null;
@@ -97,6 +101,7 @@ describe('installPackage', () => {
   });
 
   it('should send SIGKILL and reject if process does not exit after grace period', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mockProcess = new EventEmitter() as any;
     mockProcess.kill = vi.fn();
     mockProcess.exitCode = null;
@@ -121,6 +126,7 @@ describe('installPackage', () => {
   });
 
   it('should reject on spawn error', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mockProcess = new EventEmitter() as any;
     mockProcess.kill = vi.fn();
     mockProcess.exitCode = null;
@@ -136,6 +142,7 @@ describe('installPackage', () => {
   });
 
   it('should not send SIGKILL if process already exited', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mockProcess = new EventEmitter() as any;
     mockProcess.kill = vi.fn();
     mockProcess.exitCode = null;
@@ -161,6 +168,7 @@ describe('installPackage', () => {
   });
 
   it('should handle null exit code as 1', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mockProcess = new EventEmitter() as any;
     mockProcess.kill = vi.fn();
     mockProcess.exitCode = null;
@@ -177,6 +185,7 @@ describe('installPackage', () => {
   });
 
   it('should trim whitespace from registry URL', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mockProcess = new EventEmitter() as any;
     mockProcess.kill = vi.fn();
     mockProcess.exitCode = null;

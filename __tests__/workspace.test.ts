@@ -20,6 +20,7 @@ vi.mock('node:util', async () => {
     ...actual,
     promisify(fn: unknown) {
       if (fn === execFileMock) return execFileAsyncMock;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return actual.promisify(fn as any);
     },
   };
@@ -34,6 +35,7 @@ describe('prepareWorkspace', () => {
     execFileAsyncMock.mockReset();
 
     // Default: successful install
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     execFileAsyncMock.mockImplementation(async (cmd: string, args: string[], options?: any) => {
       if (cmd === 'npm' && args[0] === 'install') {
         // Create mock package-lock.json
@@ -95,6 +97,7 @@ describe('prepareWorkspace', () => {
 
   it('should return installError when lockfile parsing fails', async () => {
     // Mock successful install but create invalid JSON
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     execFileAsyncMock.mockImplementationOnce(async (cmd: string, args: string[], options?: any) => {
       if (cmd === 'npm' && args[0] === 'install') {
         await fs.writeFile(

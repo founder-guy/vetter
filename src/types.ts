@@ -87,7 +87,20 @@ export interface DependencyBreakdown {
   transitiveCount: number; // Number of transitive deps this package pulls in
 }
 
+// Typosquatting detection confidence levels
+export type TyposquattingConfidence = 'critical' | 'high' | 'medium' | 'low' | 'safe';
+
+// Typosquatting analysis result
+export interface TyposquattingAnalysis {
+  confidence: TyposquattingConfidence;
+  targetPackage?: string; // Similar package name (e.g., "lodash" for "lodassh")
+  reason?: string; // Explanation of match
+  editDistance?: number; // Levenshtein distance to target
+}
+
 // Complete analysis result
+// Note: TyposquattingAnalysis is NOT included here to avoid caching stale data
+// It will be computed fresh and merged at scoring/rendering time
 export interface AnalysisResult {
   package: PackageSnapshot;
   metrics: PackageMetrics;

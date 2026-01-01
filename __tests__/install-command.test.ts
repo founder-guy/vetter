@@ -92,7 +92,7 @@ describe('runInstallCommand', () => {
     vi.mocked(analyzePackageSecurity).mockResolvedValue(mockAnalysisResult.security);
     vi.mocked(calculateMetrics).mockResolvedValue(mockAnalysisResult.metrics);
     vi.mocked(analyzeLicense).mockReturnValue(mockAnalysisResult.license);
-    vi.mocked(analyzeDependencyBreakdown).mockReturnValue(undefined);
+    vi.mocked(analyzeDependencyBreakdown).mockReturnValue([]);
     vi.mocked(calculateScore).mockReturnValue(mockAnalysisResult.score);
     vi.mocked(saveCache).mockResolvedValue(undefined);
     vi.mocked(renderTextReport).mockReturnValue('Mock report');

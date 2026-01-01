@@ -4,6 +4,7 @@ import { analyzePackageSecurity } from '../services/security.js';
 import { calculateMetrics } from '../services/metrics.js';
 import { analyzeLicense } from '../services/license.js';
 import { analyzeDependencyBreakdown } from '../services/breakdown.js';
+import { detectTyposquatting } from '../services/typosquatting.js';
 import { calculateScore } from '../scoring.js';
 import { renderTextReport, renderJsonReport, promptInstall } from '../report.js';
 import { installPackage } from '../install.js';
@@ -66,6 +67,25 @@ export async function runInstallCommand(
         failureMessage: 'Failed to fetch package metadata',
       }
     );
+
+    // Run typosquatting detection (NOT cached, always runs fresh)
+    const typosquattingAnalysis = detectTyposquatting(packageSnapshot.name, packageSnapshot);
+
+    // Log warning to stderr for high-confidence matches (non-JSON mode only)
+    if (
+      !options.json &&
+      (typosquattingAnalysis.confidence === 'critical' ||
+        typosquattingAnalysis.confidence === 'high')
+    ) {
+      console.error(chalk.red.bold(`\n⚠️  TYPOSQUATTING RISK: ${typosquattingAnalysis.reason}`));
+      if (typosquattingAnalysis.targetPackage) {
+        console.error(
+          chalk.yellow(
+            `   If you meant to install ${typosquattingAnalysis.targetPackage}, run: npm install ${typosquattingAnalysis.targetPackage}\n`
+          )
+        );
+      }
+    }
 
     // Try to load from cache (unless --no-cache or --refresh)
     let result: AnalysisResult | null = null;
@@ -162,10 +182,15 @@ export async function runInstallCommand(
           ? analyzeDependencyBreakdown(workspace.lockfile, packageSnapshot.name)
           : undefined;
 
-        // Calculate score
-        const score = calculateScore(securityAnalysis, metrics, licenseInfo);
+        // Calculate score (uses fresh typosquatting analysis, not cached)
+        const score = calculateScore(
+          securityAnalysis,
+          metrics,
+          licenseInfo,
+          typosquattingAnalysis
+        );
 
-        // Build result
+        // Build result (typosquatting is NOT included in cached result)
         result = {
           package: packageSnapshot,
           metrics,
@@ -192,14 +217,29 @@ export async function runInstallCommand(
       }
     }
 
+    // Recompute score with fresh typosquatting analysis (whether from cache or fresh)
+    // This ensures typosquatting detection always uses latest logic
+    const score = calculateScore(
+      result.security,
+      result.metrics,
+      result.license,
+      typosquattingAnalysis
+    );
+
+    // Merge typosquatting into result for rendering (but not cached)
+    const finalResult = {
+      ...result,
+      score, // Use freshly computed score with typosquatting
+    };
+
     // Warn about degraded signals in JSON mode (via stderr so it doesn't pollute JSON)
     if (options.json) {
-      if (result.metrics.totalDependencyCount === -1) {
+      if (finalResult.metrics.totalDependencyCount === -1) {
         console.error(
           'Warning: Unable to determine dependency count - analysis may be incomplete'
         );
       }
-      if (result.security.status === 'unknown') {
+      if (finalResult.security.status === 'unknown') {
         console.error(
           'Warning: Security audit failed - vulnerability status unknown'
         );
@@ -209,22 +249,34 @@ export async function runInstallCommand(
     // Render report
     if (options.json) {
       console.log(
-        renderJsonReport(result, fromCache, cacheAgeSeconds, { showDeps: !!options.deps })
+        renderJsonReport(
+          finalResult,
+          typosquattingAnalysis,
+          fromCache,
+          cacheAgeSeconds,
+          { showDeps: !!options.deps }
+        )
       );
     } else {
       console.log(
-        renderTextReport(result, fromCache, cacheAgeSeconds, { showDeps: !!options.deps })
+        renderTextReport(
+          finalResult,
+          typosquattingAnalysis,
+          fromCache,
+          cacheAgeSeconds,
+          { showDeps: !!options.deps }
+        )
       );
     }
 
     // Check grade threshold if --fail-on-grade is set
     if (options.failOnGrade) {
-      if (isGradeAtOrBelowThreshold(result.score.grade, options.failOnGrade)) {
+      if (isGradeAtOrBelowThreshold(finalResult.score.grade, options.failOnGrade)) {
         // Grade failed threshold - return exit code 1
         if (!options.json) {
           console.log(
             chalk.red(
-              `\n✗ Package grade ${result.score.grade} fails threshold ${options.failOnGrade}\n`
+              `\n✗ Package grade ${finalResult.score.grade} fails threshold ${options.failOnGrade}\n`
             )
           );
         }
@@ -234,7 +286,7 @@ export async function runInstallCommand(
       if (!options.json) {
         console.log(
           chalk.green(
-            `\n✓ Package grade ${result.score.grade} passes threshold ${options.failOnGrade}\n`
+            `\n✓ Package grade ${finalResult.score.grade} passes threshold ${options.failOnGrade}\n`
           )
         );
       }
@@ -246,7 +298,7 @@ export async function runInstallCommand(
       if (shouldInstall) {
         console.log(chalk.bold('\nInstalling package...\n'));
         const exitCode = await installPackage(
-          `${result.package.name}@${result.package.version}`,
+          `${finalResult.package.name}@${finalResult.package.version}`,
           options.registry
         );
         return exitCode;

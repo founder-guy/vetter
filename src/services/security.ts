@@ -46,7 +46,7 @@ export async function analyzePackageSecurity(
 ): Promise<SecurityAnalysis> {
   // If workspace provided, use it; otherwise create temp workspace
   const useSharedWorkspace = !!options?.workspace;
-  let tempDir: string | null = useSharedWorkspace ? options.workspace!.dir : null;
+  let tempDir: string | undefined = useSharedWorkspace ? options.workspace!.dir : undefined;
 
   try {
     // Fail fast if shared workspace preparation failed

@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/founder-guy/vetter/compare/v1.0.1...v1.1.0) (2026-01-01)
+
+
+### Features
+
+* add typosquatting detection with multi-signal analysis ([#11](https://github.com/founder-guy/vetter/issues/11)) ([dd3689a](https://github.com/founder-guy/vetter/commit/dd3689afb733b21d20a66ffd66fe583b1481d98d))
+
 ## [1.0.1](https://github.com/founder-guy/vetter/compare/v1.0.0...v1.0.1) (2025-10-08)
 
 

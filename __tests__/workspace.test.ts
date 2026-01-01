@@ -67,7 +67,7 @@ describe('prepareWorkspace', () => {
     expect(workspace).toHaveProperty('lockfile');
     expect(workspace.lockfile).toBeDefined();
     expect(workspace.lockfile?.packages).toBeDefined();
-    expect(Object.keys(workspace.lockfile!.packages)).toHaveLength(3);
+    expect(Object.keys(workspace.lockfile!.packages!)).toHaveLength(3);
     expect(workspace.installError).toBeUndefined();
 
     // Verify temp dir exists

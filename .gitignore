@@ -8,3 +8,6 @@ coverage/
 .idea/
 *.tsbuildinfo
 *.tgz
+
+# Large data file used for generating popular-packages.ts
+all.json

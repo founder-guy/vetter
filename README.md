@@ -11,6 +11,7 @@
 ## Features
 
 - 🔍 **Security Analysis** - Runs `npm audit` to detect known vulnerabilities
+- 🎯 **Typosquatting Detection** - Multi-signal analysis to detect suspicious package names
 - 📊 **Risk Scoring** - Evaluates packages across multiple dimensions
 - 📦 **Dependency Analysis** - Counts transitive dependencies and package size
 - 👥 **Maintenance Indicators** - Checks maintainer count and staleness
@@ -127,6 +128,12 @@ rmdir /s %LOCALAPPDATA%\vetter
 
 Vetter starts at grade **A** and applies penalties based on risk factors:
 
+### Typosquatting Detection
+- **Critical (edit distance ≤1 from top-100 package)**: Instant **F grade**
+- **High (edit distance ≤2 from top-500 + young/few maintainers)**: Instant **F grade**
+- **Medium (edit distance ≤2 from top-1000 package)**: -2 grades
+- **Low (contains top-100 name + young/few maintainers)**: -1 grade
+
 ### Security
 - **Has critical vulnerabilities**: -2 grades
 - **Has high vulnerabilities**: -2 grades
@@ -194,6 +201,9 @@ Use `--json` for machine-readable output:
   },
   "grade": "B",
   "score": 20,
+  "typosquatting": {
+    "confidence": "safe"
+  },
   "security": {
     "status": "clean",
     "vulnerabilities": {
@@ -271,19 +281,21 @@ src/
 ├── scoring.ts          # Grade calculation algorithm
 ├── report.ts           # Text and JSON report rendering
 ├── install.ts          # npm install proxy
+├── data/
+│   └── popular-packages.ts  # Top 1000 npm packages for typosquatting detection
 └── services/
     ├── npm.ts          # Package metadata fetching
     ├── workspace.ts    # Shared temporary workspace management
     ├── security.ts     # npm audit runner
     ├── metrics.ts      # Dependency and staleness metrics
     ├── license.ts      # License categorization and SPDX parsing
+    ├── typosquatting.ts # Package name similarity detection
     └── breakdown.ts    # Dependency sub-tree analysis (for --deps flag)
 ```
 
 ## Roadmap
 
 - [ ] GitHub maintainer activity analysis
-- [ ] Suspicious package name detection
 - [ ] Custom license policy flags (`--allow-license`, `--deny-license`)
 
 ## FAQ

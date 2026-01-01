@@ -44,13 +44,17 @@ node bin/vetter install <package> --registry https://registry.npmjs.org --no-ins
 
 1. **CLI Entry** ([src/cli.ts](src/cli.ts)) → Parses arguments with Commander
 2. **Package Parsing** ([src/services/npm.ts](src/services/npm.ts)) → Handles `pkg`, `@scope/pkg`, `pkg@version` formats
-3. **Workspace Preparation** ([src/services/workspace.ts](src/services/workspace.ts)) → Creates shared temp directory, runs single `npm install --package-lock-only`, parses lockfile
-4. **Analysis** (reuses shared workspace):
-   - **Metadata Fetch** ([src/services/npm.ts](src/services/npm.ts)) → Uses `npm-registry-fetch` to get registry data
+3. **Metadata Fetch** ([src/services/npm.ts](src/services/npm.ts)) → Uses `npm-registry-fetch` to get registry data
+4. **Typosquatting Detection** ([src/services/typosquatting.ts](src/services/typosquatting.ts)) → Runs fresh on every invocation (NOT cached) using package name and metadata
+5. **Cache Check** → Attempt to load cached analysis (unless `--no-cache`/`--refresh`)
+6. **Workspace Preparation** (on cache miss) ([src/services/workspace.ts](src/services/workspace.ts)) → Creates shared temp directory, runs single `npm install --package-lock-only`, parses lockfile
+7. **Analysis** (on cache miss, reuses shared workspace):
    - **Security Audit** ([src/services/security.ts](src/services/security.ts)) → Runs `npm audit` in shared workspace
    - **Metrics Calculation** ([src/services/metrics.ts](src/services/metrics.ts)) → Uses pre-parsed lockfile from workspace
-5. **Scoring** ([src/scoring.ts](src/scoring.ts)) → Pure function: applies penalty rules to generate A-F grade
-6. **Rendering** ([src/report.ts](src/report.ts)) → Outputs text or JSON based on `--json` flag
+   - **License Analysis** ([src/services/license.ts](src/services/license.ts)) → Categorizes license from metadata
+   - **Dependency Breakdown** ([src/services/breakdown.ts](src/services/breakdown.ts)) → Analyzes sub-tree sizes (always computed for caching)
+8. **Scoring** ([src/scoring.ts](src/scoring.ts)) → Pure function: applies penalty rules including fresh typosquatting analysis to generate A-F grade
+9. **Rendering** ([src/report.ts](src/report.ts)) → Outputs text or JSON based on `--json` flag
 
 ### Key Architectural Patterns
 
@@ -116,6 +120,9 @@ The scoring is penalty-based, starting at grade A (0 points):
 
 | Risk Factor | Penalty |
 |-------------|---------|
+| Typosquatting: critical/high confidence | -5 grades (instant F) |
+| Typosquatting: medium confidence | -2 grades |
+| Typosquatting: low confidence | -1 grade |
 | Critical/High vulnerabilities | -2 grades each |
 | Moderate vulnerabilities | -1 grade |
 | Last publish >730 days | -2 grades |
@@ -133,6 +140,8 @@ The scoring is penalty-based, starting at grade A (0 points):
 | Unknown license | -1 grade |
 
 Grades: `A (0-19) → B (20-39) → C (40-59) → D (60-79) → E (80-99) → F (100+)`
+
+**Note**: The -5 grade deduction for critical/high typosquatting confidence guarantees a score ≥100 (F grade) regardless of other factors.
 
 ### License Categorization ([src/services/license.ts](src/services/license.ts))
 
@@ -155,6 +164,51 @@ Grades: `A (0-19) → B (20-39) → C (40-59) → D (60-79) → E (80-99) → F 
 **Legacy Format Normalization** ([src/services/npm.ts](src/services/npm.ts#L57)):
 - Object format: `{ type: 'MIT', url: '...' }` → `'MIT'`
 - Array format: `[{ type: 'MIT' }, { type: 'Apache-2.0' }]` → `'MIT OR Apache-2.0'`
+
+### Typosquatting Detection ([src/services/typosquatting.ts](src/services/typosquatting.ts))
+
+**Design**: Multi-signal confidence tiering using Levenshtein distance, package age, and maintainer count.
+
+**Key Characteristics**:
+- Runs **fresh on every invocation** (NOT cached) - ensures latest detection logic always applies
+- Uses static bundled list of top 1000 npm packages ([src/data/popular-packages.ts](src/data/popular-packages.ts))
+- Performance: ~10ms per analysis (Levenshtein with early termination when distance >2)
+
+**Confidence Tiers**:
+1. **Critical**: Edit distance ≤1 from top-100 package → Instant F grade
+2. **High**: Edit distance ≤2 from top-500 AND (age <30 days OR ≤1 maintainer) → Instant F grade
+3. **Medium**: Edit distance ≤2 from top-1000 package → -2 grades
+4. **Low**: Contains top-100 name as substring AND (age <30 days OR ≤1 maintainer) → -1 grade
+5. **Safe**: No match found
+
+**Scope Spoofing Detection**:
+- Scoped packages (@scope/name) are checked separately
+- Scope is compared against hardcoded `OFFICIAL_SCOPES` set (e.g., @types, @babel, @aws-sdk)
+- Distance 1 from official scope → critical, distance 2 → high
+- Prevents attacks like `@typess/node` vs `@types/node`
+
+**Algorithm Details**:
+- Levenshtein distance with early termination (maxDistance=2)
+  - Quick reject: skip if length difference alone exceeds maxDistance
+  - Row-minimum early termination: stop if no cell in current row ≤ maxDistance
+- Base name extraction: `@scope/package` → check scope separately, then check "package" against popular packages
+- Substring matching: only triggers for top-100 packages with multi-signal gating (age/maintainer)
+
+**Important Edge Cases**:
+- Exact matches (distance=0) are NOT flagged - prevents false positives for scoped packages like `@types/chalk` (base name "chalk" exactly matches popular package)
+- Legitimate packages like `react-native`, `lodash-es` avoid flagging due to age (>30 days) + maintainer count (>1)
+- Package must be in TOP_1000_SET for early "safe" return (self-check)
+
+**Cache Design Rationale**:
+- TyposquattingAnalysis is NOT stored in cached AnalysisResult
+- Detection runs fresh even on cache hits
+- Score is recomputed with fresh typosquatting data before rendering
+- Ensures users always get latest detection logic without waiting for cache invalidation
+
+**Data Source**:
+- [src/data/popular-packages.ts](src/data/popular-packages.ts) is auto-generated from npm download stats
+- Updated manually with vetter releases (no runtime fetching)
+- 48KB TypeScript file with pre-computed Sets for O(1) lookups
 
 ## Critical Implementation Details
 

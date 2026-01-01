@@ -7,11 +7,11 @@ import { rm } from 'node:fs/promises';
  * workspaces created during package analysis. Errors are silently ignored
  * since cleanup failures are not critical to the analysis flow.
  *
- * @param tempDir - Directory path to cleanup (can be null for convenience)
+ * @param tempDir - Directory path to cleanup (can be null/undefined for convenience)
  *
  * @example
  * ```typescript
- * let tempDir: string | null = null;
+ * let tempDir: string | undefined = undefined;
  * try {
  *   tempDir = await createTempWorkspace(...);
  *   // Use tempDir
@@ -20,7 +20,7 @@ import { rm } from 'node:fs/promises';
  * }
  * ```
  */
-export async function cleanupTempDir(tempDir: string | null): Promise<void> {
+export async function cleanupTempDir(tempDir: string | null | undefined): Promise<void> {
   if (!tempDir) return;
 
   try {

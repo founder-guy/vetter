@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { isGradeAtOrBelowThreshold } from '../src/grading.js';
 import { calculateScore } from '../src/scoring.js';
-import type { Grade, SecurityAnalysis, PackageMetrics, LicenseInfo } from '../src/types.js';
+import type { Grade, SecurityAnalysis, PackageMetrics, LicenseInfo, TyposquattingAnalysis } from '../src/types.js';
 
 describe('Grade Comparison', () => {
   describe('isGradeAtOrBelowThreshold', () => {
@@ -135,6 +135,10 @@ describe('--fail-on-grade Integration with Scoring', () => {
     normalizedSpdx: 'MIT',
   };
 
+  const safeTyposquatting: TyposquattingAnalysis = {
+    confidence: 'safe',
+  };
+
   it('should determine exit code 1 when grade fails threshold (equal)', () => {
     const security: SecurityAnalysis = {
       status: 'vulnerable',
@@ -148,7 +152,7 @@ describe('--fail-on-grade Integration with Scoring', () => {
       approximateSizeMB: 0.5,
     };
 
-    const score = calculateScore(security, metrics, permissiveLicense);
+    const score = calculateScore(security, metrics, permissiveLicense, safeTyposquatting);
     expect(score.grade).toBe('D'); // moderate vuln + stale + 1 maintainer = D
 
     const shouldFail = isGradeAtOrBelowThreshold(score.grade, 'D');
@@ -168,7 +172,7 @@ describe('--fail-on-grade Integration with Scoring', () => {
       approximateSizeMB: 5,
     };
 
-    const score = calculateScore(security, metrics, permissiveLicense);
+    const score = calculateScore(security, metrics, permissiveLicense, safeTyposquatting);
     expect(score.grade).toBe('F'); // Critical vuln + many penalties
 
     const shouldFail = isGradeAtOrBelowThreshold(score.grade, 'C');
@@ -188,7 +192,7 @@ describe('--fail-on-grade Integration with Scoring', () => {
       approximateSizeMB: 0.5,
     };
 
-    const score = calculateScore(security, metrics, permissiveLicense);
+    const score = calculateScore(security, metrics, permissiveLicense, safeTyposquatting);
     expect(score.grade).toBe('A'); // Healthy package
 
     const shouldFail = isGradeAtOrBelowThreshold(score.grade, 'C');
@@ -211,7 +215,7 @@ describe('--fail-on-grade Integration with Scoring', () => {
       approximateSizeMB: 0.5,
     };
 
-    const score = calculateScore(security, metrics, permissiveLicense);
+    const score = calculateScore(security, metrics, permissiveLicense, safeTyposquatting);
     expect(score.grade).toBe('B');
 
     const shouldFail = isGradeAtOrBelowThreshold(score.grade, threshold);
@@ -233,7 +237,7 @@ describe('--fail-on-grade Integration with Scoring', () => {
       approximateSizeMB: 0.5,
     };
 
-    const score = calculateScore(security, metrics, permissiveLicense);
+    const score = calculateScore(security, metrics, permissiveLicense, safeTyposquatting);
     expect(score.grade).toBe('B');
 
     const shouldFail = isGradeAtOrBelowThreshold(score.grade, threshold);

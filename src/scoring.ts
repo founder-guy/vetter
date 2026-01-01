@@ -5,6 +5,7 @@ import type {
   SecurityAnalysis,
   PackageMetrics,
   LicenseInfo,
+  TyposquattingAnalysis,
 } from './types.js';
 
 const GRADES: Grade[] = ['A', 'B', 'C', 'D', 'E', 'F'];
@@ -24,7 +25,8 @@ function scoreToGrade(score: number): Grade {
 export function calculateScore(
   security: SecurityAnalysis,
   metrics: PackageMetrics,
-  license: LicenseInfo
+  license: LicenseInfo,
+  typosquatting: TyposquattingAnalysis
 ): ScoreResult {
   const penalties: Penalty[] = [];
   let totalDeduction = 0;
@@ -207,6 +209,45 @@ export function calculateScore(
     }
     case 'permissive':
       // No penalty for permissive licenses
+      break;
+  }
+
+  // Typosquatting risk
+  switch (typosquatting.confidence) {
+    case 'critical':
+    case 'high': {
+      // Instant F grade: deduction of 5 guarantees score ≥ 100 (F grade) regardless of other factors
+      const deduction = 5;
+      penalties.push({
+        reason: `TYPOSQUATTING RISK: ${typosquatting.reason}`,
+        severity: 'high',
+        gradeDeduction: deduction,
+      });
+      totalDeduction += deduction;
+      break;
+    }
+    case 'medium': {
+      const deduction = 2;
+      penalties.push({
+        reason: `Suspicious package name: ${typosquatting.reason}`,
+        severity: 'high',
+        gradeDeduction: deduction,
+      });
+      totalDeduction += deduction;
+      break;
+    }
+    case 'low': {
+      const deduction = 1;
+      penalties.push({
+        reason: `Package name similarity: ${typosquatting.reason}`,
+        severity: 'medium',
+        gradeDeduction: deduction,
+      });
+      totalDeduction += deduction;
+      break;
+    }
+    case 'safe':
+      // No penalty
       break;
   }
 

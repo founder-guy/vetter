@@ -1,12 +1,21 @@
 import { describe, it, expect } from 'vitest';
 import { calculateScore } from '../src/scoring.js';
-import type { SecurityAnalysis, PackageMetrics, LicenseInfo } from '../src/types.js';
+import type {
+  SecurityAnalysis,
+  PackageMetrics,
+  LicenseInfo,
+  TyposquattingAnalysis,
+} from '../src/types.js';
 
 describe('calculateScore', () => {
   const permissiveLicense: LicenseInfo = {
     raw: 'MIT',
     category: 'permissive',
     normalizedSpdx: 'MIT',
+  };
+
+  const safeTyposquatting: TyposquattingAnalysis = {
+    confidence: 'safe',
   };
 
   it('should return grade A for healthy package', () => {
@@ -30,7 +39,7 @@ describe('calculateScore', () => {
       approximateSizeMB: 0.5,
     };
 
-    const result = calculateScore(security, metrics, permissiveLicense);
+    const result = calculateScore(security, metrics, permissiveLicense, safeTyposquatting);
     expect(result.grade).toBe('A');
     expect(result.penalties).toHaveLength(0);
   });
@@ -56,7 +65,7 @@ describe('calculateScore', () => {
       approximateSizeMB: 0.5,
     };
 
-    const result = calculateScore(security, metrics, permissiveLicense);
+    const result = calculateScore(security, metrics, permissiveLicense, safeTyposquatting);
     expect(result.grade).not.toBe('A');
     expect(result.penalties.length).toBeGreaterThan(0);
     expect(result.penalties[0].reason).toContain('critical');
@@ -83,7 +92,7 @@ describe('calculateScore', () => {
       approximateSizeMB: 0.5,
     };
 
-    const result = calculateScore(security, metrics, permissiveLicense);
+    const result = calculateScore(security, metrics, permissiveLicense, safeTyposquatting);
     expect(result.penalties.some((p) => p.reason.includes('days ago'))).toBe(
       true
     );
@@ -110,7 +119,7 @@ describe('calculateScore', () => {
       approximateSizeMB: 0.5,
     };
 
-    const result = calculateScore(security, metrics, permissiveLicense);
+    const result = calculateScore(security, metrics, permissiveLicense, safeTyposquatting);
     expect(
       result.penalties.some((p) => p.reason.includes('dependencies'))
     ).toBe(true);
@@ -137,7 +146,7 @@ describe('calculateScore', () => {
       approximateSizeMB: 0.5,
     };
 
-    const result = calculateScore(security, metrics, permissiveLicense);
+    const result = calculateScore(security, metrics, permissiveLicense, safeTyposquatting);
     expect(
       result.penalties.some((p) => p.reason.includes('maintainer'))
     ).toBe(true);
@@ -164,7 +173,7 @@ describe('calculateScore', () => {
       approximateSizeMB: 10,
     };
 
-    const result = calculateScore(security, metrics, permissiveLicense);
+    const result = calculateScore(security, metrics, permissiveLicense, safeTyposquatting);
     expect(result.penalties.some((p) => p.reason.includes('size'))).toBe(true);
   });
 
@@ -189,7 +198,7 @@ describe('calculateScore', () => {
       approximateSizeMB: 8,
     };
 
-    const result = calculateScore(security, metrics, permissiveLicense);
+    const result = calculateScore(security, metrics, permissiveLicense, safeTyposquatting);
     expect(result.grade).toBe('F');
     expect(result.penalties.length).toBeGreaterThan(3);
   });
@@ -215,7 +224,7 @@ describe('calculateScore', () => {
       approximateSizeMB: 0.5,
     };
 
-    const result = calculateScore(security, metrics, permissiveLicense);
+    const result = calculateScore(security, metrics, permissiveLicense, safeTyposquatting);
     expect(result.grade).toBe('B'); // -1 grade from A
     expect(result.penalties.length).toBe(1);
     expect(result.penalties[0].reason).toBe('Unable to determine dependency count');
@@ -250,7 +259,7 @@ describe('calculateScore', () => {
         category: 'permissive',
       };
 
-      const result = calculateScore(cleanSecurity, goodMetrics, license);
+      const result = calculateScore(cleanSecurity, goodMetrics, license, safeTyposquatting);
       expect(result.grade).toBe('A');
       expect(result.penalties).toHaveLength(0);
     });
@@ -261,7 +270,7 @@ describe('calculateScore', () => {
         category: 'network-copyleft',
       };
 
-      const result = calculateScore(cleanSecurity, goodMetrics, license);
+      const result = calculateScore(cleanSecurity, goodMetrics, license, safeTyposquatting);
       expect(result.grade).toBe('C'); // -2 grades from A
       expect(result.penalties.length).toBe(1);
       expect(result.penalties[0].reason).toContain('AGPL-3.0');
@@ -276,7 +285,7 @@ describe('calculateScore', () => {
         category: 'strong-copyleft',
       };
 
-      const result = calculateScore(cleanSecurity, goodMetrics, license);
+      const result = calculateScore(cleanSecurity, goodMetrics, license, safeTyposquatting);
       expect(result.grade).toBe('C'); // -2 grades from A
       expect(result.penalties.length).toBe(1);
       expect(result.penalties[0].reason).toContain('GPL-3.0');
@@ -291,7 +300,7 @@ describe('calculateScore', () => {
         category: 'weak-copyleft',
       };
 
-      const result = calculateScore(cleanSecurity, goodMetrics, license);
+      const result = calculateScore(cleanSecurity, goodMetrics, license, safeTyposquatting);
       expect(result.grade).toBe('B'); // -1 grade from A
       expect(result.penalties.length).toBe(1);
       expect(result.penalties[0].reason).toContain('LGPL-2.1');
@@ -306,7 +315,7 @@ describe('calculateScore', () => {
         category: 'proprietary',
       };
 
-      const result = calculateScore(cleanSecurity, goodMetrics, license);
+      const result = calculateScore(cleanSecurity, goodMetrics, license, safeTyposquatting);
       expect(result.grade).toBe('C'); // -2 grades from A
       expect(result.penalties.length).toBe(1);
       expect(result.penalties[0].reason).toContain('proprietary');
@@ -320,7 +329,7 @@ describe('calculateScore', () => {
         category: 'deprecated',
       };
 
-      const result = calculateScore(cleanSecurity, goodMetrics, license);
+      const result = calculateScore(cleanSecurity, goodMetrics, license, safeTyposquatting);
       expect(result.grade).toBe('C'); // -2 grades from A
       expect(result.penalties.length).toBe(1);
       expect(result.penalties[0].reason).toContain('JSON');
@@ -334,7 +343,7 @@ describe('calculateScore', () => {
         category: 'unlicensed',
       };
 
-      const result = calculateScore(cleanSecurity, goodMetrics, license);
+      const result = calculateScore(cleanSecurity, goodMetrics, license, safeTyposquatting);
       expect(result.grade).toBe('C'); // -2 grades from A
       expect(result.penalties.length).toBe(1);
       expect(result.penalties[0].reason).toBe('No license specified');
@@ -348,7 +357,7 @@ describe('calculateScore', () => {
         category: 'unknown',
       };
 
-      const result = calculateScore(cleanSecurity, goodMetrics, license);
+      const result = calculateScore(cleanSecurity, goodMetrics, license, safeTyposquatting);
       expect(result.grade).toBe('B'); // -1 grade from A
       expect(result.penalties.length).toBe(1);
       expect(result.penalties[0].reason).toContain('Custom-License-1.0');

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { analyzeDependencyBreakdown } from '../src/services/breakdown.js';
 import { renderTextReport, renderJsonReport } from '../src/report.js';
-import type { AnalysisResult, DependencyBreakdown } from '../src/types.js';
+import type { AnalysisResult, DependencyBreakdown, TyposquattingAnalysis } from '../src/types.js';
 
 describe('--deps CLI Integration', () => {
   /**
@@ -11,6 +11,10 @@ describe('--deps CLI Integration', () => {
    * 3. Rendering handles all three states correctly
    */
 
+  const safeTyposquatting: TyposquattingAnalysis = {
+    confidence: 'safe',
+  };
+
   const mockAnalysisResult: AnalysisResult = {
     package: {
       name: 'test-package',
@@ -19,6 +23,8 @@ describe('--deps CLI Integration', () => {
       publishedAt: new Date('2024-01-01'),
       maintainers: ['test@example.com'],
       license: 'MIT',
+      dependencies: {},
+      devDependencies: {},
     },
     metrics: {
       daysSincePublish: 30,
@@ -104,7 +110,7 @@ describe('--deps CLI Integration', () => {
       ];
 
       const result = { ...mockAnalysisResult, dependencyBreakdown: breakdown };
-      const output = renderTextReport(result, false, 0, { showDeps: true });
+      const output = renderTextReport(result, safeTyposquatting, false, 0, { showDeps: true });
 
       expect(output).toContain('Top Dependencies (by sub-tree size):');
       expect(output).toContain('lodash@4.17.21');
@@ -115,7 +121,7 @@ describe('--deps CLI Integration', () => {
 
     it('should show "No direct dependencies found" when breakdown is empty array', () => {
       const result = { ...mockAnalysisResult, dependencyBreakdown: [] };
-      const output = renderTextReport(result, false, 0, { showDeps: true });
+      const output = renderTextReport(result, safeTyposquatting, false, 0, { showDeps: true });
 
       expect(output).toContain('No direct dependencies found');
       expect(output).not.toContain('Top Dependencies');
@@ -124,7 +130,7 @@ describe('--deps CLI Integration', () => {
 
     it('should show "lockfile parsing failed" when breakdown is undefined', () => {
       const result = { ...mockAnalysisResult, dependencyBreakdown: undefined };
-      const output = renderTextReport(result, false, 0, { showDeps: true });
+      const output = renderTextReport(result, safeTyposquatting, false, 0, { showDeps: true });
 
       expect(output).toContain('lockfile parsing failed');
       expect(output).not.toContain('Top Dependencies');
@@ -137,7 +143,7 @@ describe('--deps CLI Integration', () => {
       ];
 
       const result = { ...mockAnalysisResult, dependencyBreakdown: breakdown };
-      const output = renderTextReport(result, false, 0, { showDeps: false });
+      const output = renderTextReport(result, safeTyposquatting, false, 0, { showDeps: false });
 
       expect(output).not.toContain('Top Dependencies');
       expect(output).not.toContain('lodash');
@@ -152,7 +158,7 @@ describe('--deps CLI Integration', () => {
       ];
 
       const result = { ...mockAnalysisResult, dependencyBreakdown: breakdown };
-      const output = renderJsonReport(result, false, 0, { showDeps: true });
+      const output = renderJsonReport(result, safeTyposquatting, false, 0, { showDeps: true });
       const json = JSON.parse(output);
 
       expect(json.dependencyBreakdown).toBeDefined();
@@ -163,7 +169,7 @@ describe('--deps CLI Integration', () => {
 
     it('should include empty array in JSON when breakdown is empty', () => {
       const result = { ...mockAnalysisResult, dependencyBreakdown: [] };
-      const output = renderJsonReport(result, false, 0, { showDeps: true });
+      const output = renderJsonReport(result, safeTyposquatting, false, 0, { showDeps: true });
       const json = JSON.parse(output);
 
       expect(json.dependencyBreakdown).toBeDefined();
@@ -176,7 +182,7 @@ describe('--deps CLI Integration', () => {
       ];
 
       const result = { ...mockAnalysisResult, dependencyBreakdown: breakdown };
-      const output = renderJsonReport(result, false, 0, { showDeps: false });
+      const output = renderJsonReport(result, safeTyposquatting, false, 0, { showDeps: false });
       const json = JSON.parse(output);
 
       expect(json.dependencyBreakdown).toBeUndefined();
@@ -184,7 +190,7 @@ describe('--deps CLI Integration', () => {
 
     it('should not include breakdown in JSON when breakdown is undefined', () => {
       const result = { ...mockAnalysisResult, dependencyBreakdown: undefined };
-      const output = renderJsonReport(result, false, 0, { showDeps: true });
+      const output = renderJsonReport(result, safeTyposquatting, false, 0, { showDeps: true });
       const json = JSON.parse(output);
 
       // When breakdown is undefined, JSON should not include the field
@@ -205,7 +211,7 @@ describe('--deps CLI Integration', () => {
       }
 
       const result = { ...mockAnalysisResult, dependencyBreakdown: breakdown };
-      const output = renderTextReport(result, false, 0, { showDeps: true });
+      const output = renderTextReport(result, safeTyposquatting, false, 0, { showDeps: true });
 
       // Should show all 10 entries provided
       expect(output.match(/dep-\d+/g)?.length).toBe(10);
@@ -220,7 +226,7 @@ describe('--deps CLI Integration', () => {
       ];
 
       const result = { ...mockAnalysisResult, dependencyBreakdown: breakdown };
-      const output = renderTextReport(result, false, 0, { showDeps: true });
+      const output = renderTextReport(result, safeTyposquatting, false, 0, { showDeps: true });
 
       expect(output).toContain('@babel/core@7.0.0');
       expect(output).toContain('@types/node@18.0.0');
@@ -232,7 +238,7 @@ describe('--deps CLI Integration', () => {
       ];
 
       const result = { ...mockAnalysisResult, dependencyBreakdown: breakdown };
-      const output = renderTextReport(result, false, 0, { showDeps: true });
+      const output = renderTextReport(result, safeTyposquatting, false, 0, { showDeps: true });
 
       expect(output).toContain('leaf-dep@1.0.0');
       expect(output).toContain('0 transitive deps');

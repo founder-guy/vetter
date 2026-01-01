@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import type { AnalysisResult } from './types.js';
+import type { AnalysisResult, TyposquattingAnalysis } from './types.js';
 import * as readline from 'node:readline/promises';
 import { formatAge } from './cache.js';
 
@@ -66,6 +66,7 @@ function getSeverityIcon(severity: 'high' | 'medium' | 'low'): string {
  */
 export function renderJsonReport(
   result: AnalysisResult,
+  typosquatting: TyposquattingAnalysis,
   fromCache = false,
   cacheAgeSeconds = 0,
   options: { showDeps?: boolean } = {}
@@ -79,6 +80,7 @@ export function renderJsonReport(
       },
       grade: result.score.grade,
       score: result.score.score,
+      typosquatting,
       security: {
         status: result.security.status,
         vulnerabilities: result.security.vulnerabilities,
@@ -118,6 +120,7 @@ export function renderJsonReport(
  */
 export function renderTextReport(
   result: AnalysisResult,
+  typosquatting: TyposquattingAnalysis,
   fromCache = false,
   cacheAgeSeconds = 0,
   options: { showDeps?: boolean } = {}
@@ -139,6 +142,34 @@ export function renderTextReport(
   }
   lines.push(chalk.bold('━'.repeat(60)));
   lines.push('');
+
+  // Typosquatting warning (NEW - insert before grade badge)
+  if (typosquatting.confidence !== 'safe') {
+    lines.push('');
+    const warningColor =
+      typosquatting.confidence === 'critical' || typosquatting.confidence === 'high'
+        ? chalk.red.bold
+        : typosquatting.confidence === 'medium'
+          ? chalk.yellow.bold
+          : chalk.gray;
+
+    const warningPrefix =
+      typosquatting.confidence === 'critical' || typosquatting.confidence === 'high'
+        ? '⚠️  TYPOSQUATTING RISK'
+        : typosquatting.confidence === 'medium'
+          ? '⚠️  Suspicious Package Name'
+          : 'ℹ️  Package Name Similarity';
+
+    lines.push(warningColor(`  ${warningPrefix}`));
+    lines.push(warningColor(`  ${typosquatting.reason}`));
+
+    if (typosquatting.targetPackage) {
+      lines.push(
+        chalk.yellow(`  If you meant "${typosquatting.targetPackage}", run: npm install ${typosquatting.targetPackage}`)
+      );
+    }
+    lines.push('');
+  }
 
   // Grade badge
   const gradeColor = getGradeColor(score.grade);

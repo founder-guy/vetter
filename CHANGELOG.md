@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/founder-guy/vetter/compare/v1.1.0...v1.1.1) (2026-04-14)
+
+
+### Bug Fixes
+
+* prevent lower-tier matches from shadowing higher-tier typosquatting detections ([cb0a1b3](https://github.com/founder-guy/vetter/commit/cb0a1b38b6c2749ed67747f904e654a4bcc15d8c))
+
 # [1.1.0](https://github.com/founder-guy/vetter/compare/v1.0.1...v1.1.0) (2026-01-01)
 
 

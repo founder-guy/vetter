@@ -229,5 +229,15 @@ describe('typosquatting detection', () => {
       const result = detectTyposquatting('lodash-es', createMockSnapshot('lodash-es', 1000, 10));
       expect(result.confidence).toBe('safe');
     });
+
+    it('should not let a closer low-tier match shadow a higher-tier match', () => {
+      // "flattens" is distance 1 from "flatten" (top-1000 only)
+      // and distance 2 from "flatted" (top-500).
+      // With suspicious signals (new package, 1 maintainer), the top-500
+      // match should trigger "high" — not be shadowed by the closer top-1000 match.
+      const result = detectTyposquatting('flattens', createMockSnapshot('flattens', 5, 1));
+      expect(result.confidence).toBe('high');
+      expect(result.targetPackage).toBe('flatted');
+    });
   });
 });

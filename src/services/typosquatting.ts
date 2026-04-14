@@ -140,7 +140,11 @@ export function detectTyposquatting(
     return { confidence: 'safe' };
   }
 
-  let bestMatch: { name: string; distance: number; tier: string } | null = null;
+  // Track best match per tier to prevent a closer low-tier match from
+  // shadowing a more dangerous higher-tier match
+  let bestTop100: { name: string; distance: number } | null = null;
+  let bestTop500: { name: string; distance: number } | null = null;
+  let bestAny: { name: string; distance: number } | null = null;
 
   // Check against all popular packages with early termination (maxDistance=2)
   for (const popularPkg of POPULAR_PACKAGES) {
@@ -148,46 +152,54 @@ export function detectTyposquatting(
 
     // Only consider matches with distance > 0 and ≤2 (distance=0 means exact match, not typosquat)
     // This prevents false positives for scoped packages like @types/node, @babel/core
-    if (distance > 0 && distance <= 2 && (!bestMatch || distance < bestMatch.distance)) {
-      bestMatch = { name: popularPkg.name, distance, tier: popularPkg.tier };
+    if (distance > 0 && distance <= 2) {
+      if (TOP_100_SET.has(popularPkg.name) && (!bestTop100 || distance < bestTop100.distance)) {
+        bestTop100 = { name: popularPkg.name, distance };
+      }
+      if (TOP_500_SET.has(popularPkg.name) && (!bestTop500 || distance < bestTop500.distance)) {
+        bestTop500 = { name: popularPkg.name, distance };
+      }
+      if (!bestAny || distance < bestAny.distance) {
+        bestAny = { name: popularPkg.name, distance };
+      }
     }
   }
 
-  // Apply confidence tiers (only if bestMatch exists)
-  if (bestMatch) {
-    // Critical: Edit distance ≤1 from top-100
-    if (bestMatch.distance <= 1 && TOP_100_SET.has(bestMatch.name)) {
-      return {
-        confidence: 'critical',
-        targetPackage: bestMatch.name,
-        editDistance: bestMatch.distance,
-        reason: `Name is ${bestMatch.distance} character${bestMatch.distance === 1 ? '' : 's'} from "${bestMatch.name}"`,
-      };
-    }
+  // Apply confidence tiers from most dangerous to least dangerous,
+  // each evaluated against its own best match within that tier
 
-    // High: Edit distance ≤2 from top-500 AND (age <30 days OR ≤1 maintainer)
-    if (
-      bestMatch.distance <= 2 &&
-      TOP_500_SET.has(bestMatch.name) &&
-      (packageAge < 30 || maintainerCount <= 1)
-    ) {
-      return {
-        confidence: 'high',
-        targetPackage: bestMatch.name,
-        editDistance: bestMatch.distance,
-        reason: `Name is ${bestMatch.distance} character${bestMatch.distance === 1 ? '' : 's'} from "${bestMatch.name}" and package ${packageAge < 30 ? `was published ${packageAge} day${packageAge === 1 ? '' : 's'} ago` : `has ${maintainerCount} maintainer${maintainerCount === 1 ? '' : 's'}`}`,
-      };
-    }
+  // Critical: Edit distance ≤1 from top-100
+  if (bestTop100 && bestTop100.distance <= 1) {
+    return {
+      confidence: 'critical',
+      targetPackage: bestTop100.name,
+      editDistance: bestTop100.distance,
+      reason: `Name is ${bestTop100.distance} character${bestTop100.distance === 1 ? '' : 's'} from "${bestTop100.name}"`,
+    };
+  }
 
-    // Medium: Edit distance ≤2 from top-1000
-    if (bestMatch.distance <= 2) {
-      return {
-        confidence: 'medium',
-        targetPackage: bestMatch.name,
-        editDistance: bestMatch.distance,
-        reason: `Name is ${bestMatch.distance} character${bestMatch.distance === 1 ? '' : 's'} from "${bestMatch.name}"`,
-      };
-    }
+  // High: Edit distance ≤2 from top-500 AND (age <30 days OR ≤1 maintainer)
+  if (
+    bestTop500 &&
+    bestTop500.distance <= 2 &&
+    (packageAge < 30 || maintainerCount <= 1)
+  ) {
+    return {
+      confidence: 'high',
+      targetPackage: bestTop500.name,
+      editDistance: bestTop500.distance,
+      reason: `Name is ${bestTop500.distance} character${bestTop500.distance === 1 ? '' : 's'} from "${bestTop500.name}" and package ${packageAge < 30 ? `was published ${packageAge} day${packageAge === 1 ? '' : 's'} ago` : `has ${maintainerCount} maintainer${maintainerCount === 1 ? '' : 's'}`}`,
+    };
+  }
+
+  // Medium: Edit distance ≤2 from any top-1000 package
+  if (bestAny && bestAny.distance <= 2) {
+    return {
+      confidence: 'medium',
+      targetPackage: bestAny.name,
+      editDistance: bestAny.distance,
+      reason: `Name is ${bestAny.distance} character${bestAny.distance === 1 ? '' : 's'} from "${bestAny.name}"`,
+    };
   }
 
   // Low: Contains exact name of top-100 as substring AND (age <30 days OR ≤1 maintainer)

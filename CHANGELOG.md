@@ -1,3 +1,10 @@
+## [1.1.2](https://github.com/founder-guy/vetter/compare/v1.1.1...v1.1.2) (2026-04-15)
+
+
+### Bug Fixes
+
+* preserve error cause in npm metadata fetch catch blocks ([06d5e8f](https://github.com/founder-guy/vetter/commit/06d5e8f8e03763afab27b60f9ae931e4063c7c7b))
+
 ## [1.1.1](https://github.com/founder-guy/vetter/compare/v1.1.0...v1.1.1) (2026-04-14)
 
 

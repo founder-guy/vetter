@@ -170,7 +170,7 @@ export const VulnerabilitySummarySchema = z.object({
 });
 
 export const AuditResponseSchema = z.object({
-  vulnerabilities: z.record(z.any()).optional(),
+  vulnerabilities: z.record(z.string(), z.any()).optional(),
   metadata: z
     .object({
       vulnerabilities: VulnerabilitySummarySchema.optional(),

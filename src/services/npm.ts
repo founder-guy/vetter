@@ -110,13 +110,13 @@ export async function getPackageMetadata(
 
     if (isErrorWithCode(error)) {
       if (error.statusCode === 404 || error.code === 'E404') {
-        throw new Error(`Package not found: ${name}`);
+        throw new Error(`Package not found: ${name}`, { cause: error });
       }
       if (error.code === 'ENOTFOUND' || error.code === 'EAI_AGAIN') {
-        throw new Error('Cannot reach npm registry. Check your internet connection.');
+        throw new Error('Cannot reach npm registry. Check your internet connection.', { cause: error });
       }
     }
 
-    throw new Error(`Failed to fetch package metadata: ${getErrorMessage(error)}`);
+    throw new Error(`Failed to fetch package metadata: ${getErrorMessage(error)}`, { cause: error });
   }
 }

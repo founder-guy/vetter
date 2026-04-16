@@ -203,6 +203,69 @@ describe('calculateScore', () => {
     expect(result.penalties.length).toBeGreaterThan(3);
   });
 
+  it('should penalize unknown publish date (daysSincePublish = -1)', () => {
+    // Mirrors the sentinel behavior of totalDependencyCount.
+    // When the registry omits or mangles `time[version]`, metrics sets
+    // daysSincePublish = -1 and scoring must apply a 'Publish date unknown'
+    // penalty instead of either silently treating it as "just published"
+    // (which would skip staleness) or "stale" (which would over-penalize).
+    const security: SecurityAnalysis = {
+      status: 'clean',
+      vulnerabilities: {
+        critical: 0,
+        high: 0,
+        moderate: 0,
+        low: 0,
+        info: 0,
+        total: 0,
+      },
+    };
+
+    const metrics: PackageMetrics = {
+      daysSincePublish: -1, // Unknown
+      maintainerCount: 5,
+      directDependencyCount: 3,
+      totalDependencyCount: 10,
+      approximateSizeMB: 0.5,
+    };
+
+    const result = calculateScore(security, metrics, permissiveLicense, safeTyposquatting);
+    expect(result.grade).toBe('B'); // -1 grade from A
+    expect(result.penalties).toHaveLength(1);
+    expect(result.penalties[0].reason).toBe('Publish date unknown');
+    expect(result.penalties[0].severity).toBe('medium');
+    expect(result.penalties[0].gradeDeduction).toBe(1);
+  });
+
+  it('should NOT also apply a staleness penalty when publish date is unknown', () => {
+    // Regression: the unknown-date branch must short-circuit so the epoch
+    // fallback cannot trigger the "published >2 years ago" penalty.
+    const security: SecurityAnalysis = {
+      status: 'clean',
+      vulnerabilities: {
+        critical: 0,
+        high: 0,
+        moderate: 0,
+        low: 0,
+        info: 0,
+        total: 0,
+      },
+    };
+
+    const metrics: PackageMetrics = {
+      daysSincePublish: -1,
+      maintainerCount: 5,
+      directDependencyCount: 3,
+      totalDependencyCount: 10,
+      approximateSizeMB: 0.5,
+    };
+
+    const result = calculateScore(security, metrics, permissiveLicense, safeTyposquatting);
+    // Only the 'Publish date unknown' penalty; no staleness penalty mentioning "days ago"
+    expect(result.penalties.some((p) => p.reason.includes('days ago'))).toBe(false);
+    expect(result.penalties.some((p) => p.reason === 'Publish date unknown')).toBe(true);
+  });
+
   it('should penalize unknown dependency count (-1)', () => {
     const security: SecurityAnalysis = {
       status: 'clean',

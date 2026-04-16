@@ -117,9 +117,15 @@ export function detectTyposquatting(
   packageSnapshot: PackageSnapshot
 ): TyposquattingAnalysis {
   const { scope, baseName } = extractPackageName(packageName);
-  const packageAge = Math.floor(
-    (Date.now() - packageSnapshot.publishedAt.getTime()) / (1000 * 60 * 60 * 24)
-  );
+  // Only compute age when publish date is trustworthy. When unknown, drop the
+  // age signal so the `age < 30` gate can't fire against the epoch fallback
+  // (which would force an instant-F false positive for any distance-2 match
+  // on packages from registries that omit `time[version]`).
+  const ageKnown = packageSnapshot.publishedAtKnown;
+  const packageAge = ageKnown
+    ? Math.floor((Date.now() - packageSnapshot.publishedAt.getTime()) / (1000 * 60 * 60 * 24))
+    : -1;
+  const isYoung = ageKnown && packageAge < 30;
   const maintainerCount = packageSnapshot.maintainers.length;
 
   // Check for scope typosquatting first (if scoped package)
@@ -179,16 +185,12 @@ export function detectTyposquatting(
   }
 
   // High: Edit distance ≤2 from top-500 AND (age <30 days OR ≤1 maintainer)
-  if (
-    bestTop500 &&
-    bestTop500.distance <= 2 &&
-    (packageAge < 30 || maintainerCount <= 1)
-  ) {
+  if (bestTop500 && bestTop500.distance <= 2 && (isYoung || maintainerCount <= 1)) {
     return {
       confidence: 'high',
       targetPackage: bestTop500.name,
       editDistance: bestTop500.distance,
-      reason: `Name is ${bestTop500.distance} character${bestTop500.distance === 1 ? '' : 's'} from "${bestTop500.name}" and package ${packageAge < 30 ? `was published ${packageAge} day${packageAge === 1 ? '' : 's'} ago` : `has ${maintainerCount} maintainer${maintainerCount === 1 ? '' : 's'}`}`,
+      reason: `Name is ${bestTop500.distance} character${bestTop500.distance === 1 ? '' : 's'} from "${bestTop500.name}" and package ${isYoung ? `was published ${packageAge} day${packageAge === 1 ? '' : 's'} ago` : `has ${maintainerCount} maintainer${maintainerCount === 1 ? '' : 's'}`}`,
     };
   }
 
@@ -208,12 +210,12 @@ export function detectTyposquatting(
     if (
       baseName.includes(top100Pkg) &&
       baseName !== top100Pkg &&
-      (packageAge < 30 || maintainerCount <= 1)
+      (isYoung || maintainerCount <= 1)
     ) {
       return {
         confidence: 'low',
         targetPackage: top100Pkg,
-        reason: `Name contains "${top100Pkg}" as substring and package ${packageAge < 30 ? `was published ${packageAge} day${packageAge === 1 ? '' : 's'} ago` : `has ${maintainerCount} maintainer${maintainerCount === 1 ? '' : 's'}`}`,
+        reason: `Name contains "${top100Pkg}" as substring and package ${isYoung ? `was published ${packageAge} day${packageAge === 1 ? '' : 's'} ago` : `has ${maintainerCount} maintainer${maintainerCount === 1 ? '' : 's'}`}`,
       };
     }
   }

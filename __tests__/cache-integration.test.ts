@@ -9,6 +9,7 @@ vi.mock('../src/services/npm.js', () => ({
     name: 'test-package',
     version: '1.0.0',
     publishedAt: new Date('2024-01-01T00:00:00Z'),
+    publishedAtKnown: true,
     maintainers: ['test@example.com'],
     dependencies: {},
     devDependencies: {},

@@ -66,8 +66,18 @@ export function calculateScore(
     }
   }
 
-  // Staleness
-  if (metrics.daysSincePublish > 730) {
+  // Publish date / staleness
+  if (metrics.daysSincePublish === -1) {
+    // Sentinel: registry returned no parseable `time[version]`.
+    // Mirrors the 'Unable to determine dependency count' branch below.
+    const deduction = 1;
+    penalties.push({
+      reason: 'Publish date unknown',
+      severity: 'medium',
+      gradeDeduction: deduction,
+    });
+    totalDeduction += deduction;
+  } else if (metrics.daysSincePublish > 730) {
     const deduction = 2;
     penalties.push({
       reason: `Last published ${metrics.daysSincePublish} days ago (>2 years)`,

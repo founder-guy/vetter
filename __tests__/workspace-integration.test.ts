@@ -37,6 +37,7 @@ describe('Shared Workspace Integration', () => {
     name: 'test-package',
     version: '1.0.0',
     publishedAt: new Date('2024-01-01'),
+    publishedAtKnown: true,
     maintainers: ['test@example.com'],
     dependencies: { 'dep-1': '^1.0.0' },
     devDependencies: {},

@@ -41,7 +41,10 @@ export function analyzeDependencyBreakdown(
 /**
  * Analyze v2/v3 lockfile format (packages map)
  */
-function analyzePackagesMap(packages: Record<string, PackageLockEntry>, targetPackage: string): DependencyBreakdown[] {
+function analyzePackagesMap(
+  packages: Record<string, PackageLockEntry>,
+  targetPackage: string
+): DependencyBreakdown[] {
   const breakdown: DependencyBreakdown[] = [];
 
   // Find the target package in the lockfile
@@ -82,10 +85,7 @@ function analyzePackagesMap(packages: Record<string, PackageLockEntry>, targetPa
 /**
  * Count transitive dependencies for a package in v2/v3 format
  */
-function countTransitiveDeps(
-  basePath: string,
-  packages: Record<string, PackageLockEntry>
-): number {
+function countTransitiveDeps(basePath: string, packages: Record<string, PackageLockEntry>): number {
   const visited = new Set<string>();
   const queue: string[] = [basePath];
   visited.add(basePath); // Mark base as visited immediately
@@ -129,7 +129,10 @@ function countTransitiveDeps(
 /**
  * Analyze v1 lockfile format (dependencies tree)
  */
-function analyzeDependenciesTree(dependencies: Record<string, PackageLockEntry>, targetPackage: string): DependencyBreakdown[] {
+function analyzeDependenciesTree(
+  dependencies: Record<string, PackageLockEntry>,
+  targetPackage: string
+): DependencyBreakdown[] {
   const breakdown: DependencyBreakdown[] = [];
 
   // Find the target package in the v1 tree

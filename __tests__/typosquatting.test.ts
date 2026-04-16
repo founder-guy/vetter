@@ -22,6 +22,7 @@ function createMockSnapshot(
     name,
     version: '1.0.0',
     publishedAt: new Date(Date.now() - daysOld * 24 * 60 * 60 * 1000),
+    publishedAtKnown: true,
     maintainers: Array(maintainerCount).fill('mock@example.com'),
     dependencies: {},
     devDependencies: {},
@@ -228,6 +229,28 @@ describe('typosquatting detection', () => {
       // lodash-es is a real, legitimate package (established, multiple maintainers)
       const result = detectTyposquatting('lodash-es', createMockSnapshot('lodash-es', 1000, 10));
       expect(result.confidence).toBe('safe');
+    });
+
+    it('should not promote distance-2 top-500 match to "high" when publish date is unknown and package has multiple maintainers', () => {
+      // Regression: before the fix, epoch-fallback publishedAt made
+      // `packageAge < 30` true (Date.now() >> epoch gives a huge positive
+      // age — but the OLD code used `Date.now()` fallback which produced
+      // age=0, satisfying `age < 30` and forcing an instant-F). With the
+      // fix, unknown dates drop the age signal entirely so we fall through
+      // to the maintainer-count gate.
+      const target = SAMPLE_TOP_500[0];
+      const typo = typosquat(target, 2);
+      const snapshot = createMockSnapshot(typo, 500, 3); // 3 maintainers
+      // Simulate unknown publish date post-fix.
+      snapshot.publishedAtKnown = false;
+      snapshot.publishedAt = new Date(0);
+
+      const result = detectTyposquatting(typo, snapshot);
+
+      // Should NOT be 'high' (age gate can't fire; maintainer count > 1).
+      // Falls through to medium (distance ≤2 from top-1000).
+      expect(result.confidence).not.toBe('high');
+      expect(result.confidence).toBe('medium');
     });
 
     it('should not let a closer low-tier match shadow a higher-tier match', () => {

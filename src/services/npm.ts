@@ -91,10 +91,33 @@ export async function getPackageMetadata(
       normalizedLicense = types.length > 0 ? types.join(' OR ') : undefined;
     }
 
+    // Parse publish date defensively: registries sometimes omit `time`,
+    // return empty strings, or return non-ISO garbage. A naive
+    // `new Date(value || Date.now())` silently distorts scoring/typosquat
+    // when the value is missing, and crashes later (toISOString on
+    // Invalid Date) when the value is truthy-but-unparseable.
+    const rawTime = packument.time?.[manifest.version];
+    let publishedAt: Date;
+    let publishedAtKnown: boolean;
+    if (typeof rawTime === 'string' && rawTime.length > 0) {
+      const parsed = new Date(rawTime);
+      if (Number.isFinite(parsed.getTime())) {
+        publishedAt = parsed;
+        publishedAtKnown = true;
+      } else {
+        publishedAt = new Date(0);
+        publishedAtKnown = false;
+      }
+    } else {
+      publishedAt = new Date(0);
+      publishedAtKnown = false;
+    }
+
     return {
       name: manifest.name,
       version: manifest.version,
-      publishedAt: new Date(packument.time?.[manifest.version] || Date.now()),
+      publishedAt,
+      publishedAtKnown,
       maintainers: (manifest.maintainers || []).map((m: Maintainer) =>
         typeof m === 'string' ? m : m.name || m.email || 'unknown'
       ),
@@ -113,10 +136,14 @@ export async function getPackageMetadata(
         throw new Error(`Package not found: ${name}`, { cause: error });
       }
       if (error.code === 'ENOTFOUND' || error.code === 'EAI_AGAIN') {
-        throw new Error('Cannot reach npm registry. Check your internet connection.', { cause: error });
+        throw new Error('Cannot reach npm registry. Check your internet connection.', {
+          cause: error,
+        });
       }
     }
 
-    throw new Error(`Failed to fetch package metadata: ${getErrorMessage(error)}`, { cause: error });
+    throw new Error(`Failed to fetch package metadata: ${getErrorMessage(error)}`, {
+      cause: error,
+    });
   }
 }

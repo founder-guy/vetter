@@ -12,9 +12,7 @@ import { getErrorMessage } from './utils/errors.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const packageJson = JSON.parse(
-  readFileSync(join(__dirname, '../package.json'), 'utf-8')
-);
+const packageJson = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf-8'));
 
 const program = new Command();
 
@@ -30,7 +28,10 @@ program
   .option('--no-install', 'Skip installation prompt')
   .option('--no-cache', 'Skip cache read/write')
   .option('--refresh', 'Force re-analysis and update cache')
-  .option('--fail-on-grade <grade>', 'Exit with code 1 if package grade is at or below threshold (A-F)')
+  .option(
+    '--fail-on-grade <grade>',
+    'Exit with code 1 if package grade is at or below threshold (A-F)'
+  )
   .option('--deps', 'Show detailed dependency breakdown (top 10 by sub-tree size)')
   .option('--registry <url>', 'Use custom npm registry (defaults to public npm)')
   .action(async (packageString: string, options: InstallOptions) => {

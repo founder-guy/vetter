@@ -70,7 +70,7 @@ export async function analyzePackageSecurity(
 
       // Warn about install failures but continue (audit might still work)
       if (result.installError) {
-        console.warn('Install warning:', result.installError);
+        console.error(`[vetter] Warning: Install warning: ${result.installError}`);
       }
     }
 
@@ -94,10 +94,7 @@ export async function analyzePackageSecurity(
       const vulnerabilities: VulnerabilitySummary =
         parsed.metadata?.vulnerabilities || EMPTY_VULNERABILITIES;
 
-      const status =
-        vulnerabilities.total > 0
-          ? ('vulnerable' as const)
-          : ('clean' as const);
+      const status = vulnerabilities.total > 0 ? ('vulnerable' as const) : ('clean' as const);
 
       return {
         status,

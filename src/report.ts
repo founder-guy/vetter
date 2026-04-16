@@ -91,13 +91,14 @@ export function renderJsonReport(
         normalizedSpdx: result.license.normalizedSpdx,
       },
       metrics: {
-        daysSincePublish: result.metrics.daysSincePublish,
+        daysSincePublish:
+          result.metrics.daysSincePublish === -1 ? null : result.metrics.daysSincePublish,
+        daysSincePublishStatus:
+          result.metrics.daysSincePublish === -1 ? 'unknown' : 'known',
         maintainerCount: result.metrics.maintainerCount,
         directDependencyCount: result.metrics.directDependencyCount,
         totalDependencyCount:
-          result.metrics.totalDependencyCount === -1
-            ? null
-            : result.metrics.totalDependencyCount,
+          result.metrics.totalDependencyCount === -1 ? null : result.metrics.totalDependencyCount,
         totalDependencyCountStatus:
           result.metrics.totalDependencyCount === -1 ? 'unknown' : 'known',
         approximateSizeMB: result.metrics.approximateSizeMB,
@@ -131,9 +132,7 @@ export function renderTextReport(
   // Header
   lines.push('');
   lines.push(chalk.bold('━'.repeat(60)));
-  lines.push(
-    chalk.bold(`  ${pkg.name}`) + chalk.gray(`@${pkg.version}`)
-  );
+  lines.push(chalk.bold(`  ${pkg.name}`) + chalk.gray(`@${pkg.version}`));
   if (fromCache) {
     lines.push(chalk.dim(`  (cached ${formatAge(cacheAgeSeconds)} ago)`));
   }
@@ -165,7 +164,9 @@ export function renderTextReport(
 
     if (typosquatting.targetPackage) {
       lines.push(
-        chalk.yellow(`  If you meant "${typosquatting.targetPackage}", run: npm install ${typosquatting.targetPackage}`)
+        chalk.yellow(
+          `  If you meant "${typosquatting.targetPackage}", run: npm install ${typosquatting.targetPackage}`
+        )
       );
     }
     lines.push('');
@@ -180,11 +181,9 @@ export function renderTextReport(
   if (security.status === 'vulnerable') {
     lines.push(chalk.bold('  Security Issues:'));
     const { critical, high, moderate, low } = security.vulnerabilities;
-    if (critical > 0)
-      lines.push(`    ${chalk.red('●')} ${critical} critical`);
+    if (critical > 0) lines.push(`    ${chalk.red('●')} ${critical} critical`);
     if (high > 0) lines.push(`    ${chalk.red('●')} ${high} high`);
-    if (moderate > 0)
-      lines.push(`    ${chalk.yellow('●')} ${moderate} moderate`);
+    if (moderate > 0) lines.push(`    ${chalk.yellow('●')} ${moderate} moderate`);
     if (low > 0) lines.push(`    ${chalk.blue('●')} ${low} low`);
     lines.push('');
   } else if (security.status === 'clean') {
@@ -211,21 +210,19 @@ export function renderTextReport(
   lines.push(
     `    ${chalk.cyan('👥')} ${metrics.maintainerCount} ${metrics.maintainerCount === 1 ? 'maintainer' : 'maintainers'}`
   );
-  lines.push(
-    `    ${chalk.cyan('📅')} Published ${metrics.daysSincePublish} days ago`
-  );
+  if (metrics.daysSincePublish === -1) {
+    lines.push(`    ${chalk.cyan('📅')} ${chalk.yellow('Published date unknown')}`);
+  } else {
+    lines.push(`    ${chalk.cyan('📅')} Published ${metrics.daysSincePublish} days ago`);
+  }
   if (metrics.approximateSizeMB > 0) {
-    lines.push(
-      `    ${chalk.cyan('💾')} ~${metrics.approximateSizeMB.toFixed(1)} MB unpacked`
-    );
+    lines.push(`    ${chalk.cyan('💾')} ~${metrics.approximateSizeMB.toFixed(1)} MB unpacked`);
   }
 
   // License info
   const licenseColor = getLicenseColor(result.license.category);
   const licenseText = result.license.raw || 'None';
-  lines.push(
-    `    ${chalk.cyan('📄')} License: ${licenseColor(licenseText)}`
-  );
+  lines.push(`    ${chalk.cyan('📄')} License: ${licenseColor(licenseText)}`);
   lines.push('');
 
   // Dependency breakdown (if --deps flag is set)
@@ -278,9 +275,7 @@ export async function promptInstall(): Promise<boolean> {
   });
 
   try {
-    const answer = await rl.question(
-      chalk.bold('Proceed with install? [y/N] ')
-    );
+    const answer = await rl.question(chalk.bold('Proceed with install? [y/N] '));
     return answer.toLowerCase() === 'y';
   } finally {
     rl.close();

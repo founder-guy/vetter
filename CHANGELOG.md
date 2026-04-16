@@ -1,3 +1,10 @@
+## [1.1.4](https://github.com/founder-guy/vetter/compare/v1.1.3...v1.1.4) (2026-04-16)
+
+
+### Bug Fixes
+
+* publish-date robustness + logging convention alignment ([#25](https://github.com/founder-guy/vetter/issues/25)) ([cc9ccdd](https://github.com/founder-guy/vetter/commit/cc9ccdddcd7fd6b568e067f52d3860ff8a68e033))
+
 ## [1.1.3](https://github.com/founder-guy/vetter/compare/v1.1.2...v1.1.3) (2026-04-15)
 
 

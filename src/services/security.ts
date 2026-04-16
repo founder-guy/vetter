@@ -94,10 +94,7 @@ export async function analyzePackageSecurity(
       const vulnerabilities: VulnerabilitySummary =
         parsed.metadata?.vulnerabilities || EMPTY_VULNERABILITIES;
 
-      const status =
-        vulnerabilities.total > 0
-          ? ('vulnerable' as const)
-          : ('clean' as const);
+      const status = vulnerabilities.total > 0 ? ('vulnerable' as const) : ('clean' as const);
 
       return {
         status,

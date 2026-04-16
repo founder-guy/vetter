@@ -36,15 +36,11 @@ export async function prepareWorkspace(
   options?: import('../types.js').RegistryOptions
 ): Promise<Workspace> {
   // Use shared helper to create workspace
-  const { dir, lockfile, installError } = await createTempWorkspace(
-    packageName,
-    version,
-    {
-      workspaceName: 'workspace',
-      registry: options?.registry,
-      timeout: NPM_INSTALL_TIMEOUT,
-    }
-  );
+  const { dir, lockfile, installError } = await createTempWorkspace(packageName, version, {
+    workspaceName: 'workspace',
+    registry: options?.registry,
+    timeout: NPM_INSTALL_TIMEOUT,
+  });
 
   // Cleanup function (ignores errors per current pattern)
   const cleanup = async () => {

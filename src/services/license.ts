@@ -249,7 +249,7 @@ function categorizeExpression(expression: string): LicenseCategory {
   const orParts = splitByTopLevelOperator(trimmed, 'OR');
   if (orParts.length > 1) {
     // Has top-level OR: process each branch and apply "best case" logic
-    const categories = orParts.map(part => categorizeExpression(part));
+    const categories = orParts.map((part) => categorizeExpression(part));
 
     // If any branch is permissive, consider it acceptable
     if (categories.includes('permissive')) {
@@ -264,7 +264,7 @@ function categorizeExpression(expression: string): LicenseCategory {
   const andParts = splitByTopLevelOperator(trimmed, 'AND');
   if (andParts.length > 1) {
     // Has top-level AND: process each branch and apply "worst case" logic
-    const categories = andParts.map(part => categorizeExpression(part));
+    const categories = andParts.map((part) => categorizeExpression(part));
     return getWorstCategory(categories);
   }
 

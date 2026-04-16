@@ -1015,11 +1015,11 @@ export const POPULAR_PACKAGES: PopularPackage[] = [
 
 // Pre-computed sets for O(1) lookups
 export const TOP_100_SET = new Set(
-  POPULAR_PACKAGES.filter(p => p.tier === 'top-100').map(p => p.name)
+  POPULAR_PACKAGES.filter((p) => p.tier === 'top-100').map((p) => p.name)
 );
 
 export const TOP_500_SET = new Set(
-  POPULAR_PACKAGES.filter(p => p.tier === 'top-100' || p.tier === 'top-500').map(p => p.name)
+  POPULAR_PACKAGES.filter((p) => p.tier === 'top-100' || p.tier === 'top-500').map((p) => p.name)
 );
 
-export const TOP_1000_SET = new Set(POPULAR_PACKAGES.map(p => p.name));
+export const TOP_1000_SET = new Set(POPULAR_PACKAGES.map((p) => p.name));

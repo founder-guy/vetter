@@ -245,4 +245,66 @@ describe('getPackageMetadata', () => {
       preferOnline: true,
     });
   });
+
+  describe('publishedAt defensive parsing', () => {
+    // Build a packument where `time[version]` can be overridden. Some
+    // registries (private Verdaccio, GitHub Packages, JFrog) omit or mangle
+    // this field, so `getPackageMetadata` must never crash on it.
+    const buildPackument = (timeValue: unknown): Packument => {
+      const pkg = createMockPackument('example', {
+        '1.0.0': { version: '1.0.0' },
+      });
+      // Override time[version] with the value under test (cast to bypass
+      // the strict type — we're simulating untrusted registry input).
+      (pkg as unknown as { time: Record<string, unknown> }).time = {
+        '1.0.0': timeValue,
+      };
+      return pkg;
+    };
+
+    it('returns publishedAtKnown=false when time[version] is missing', async () => {
+      const mockPackument = buildPackument(undefined);
+      vi.mocked(registryFetch.json).mockResolvedValue(mockPackument);
+
+      const pkg = await getPackageMetadata('example');
+
+      expect(pkg.publishedAtKnown).toBe(false);
+      expect(pkg.publishedAt.getTime()).toBe(0); // epoch fallback
+    });
+
+    it('returns publishedAtKnown=false when time[version] is empty string', async () => {
+      const mockPackument = buildPackument('');
+      vi.mocked(registryFetch.json).mockResolvedValue(mockPackument);
+
+      const pkg = await getPackageMetadata('example');
+
+      expect(pkg.publishedAtKnown).toBe(false);
+      expect(pkg.publishedAt.getTime()).toBe(0);
+    });
+
+    it('surfaces a sensible error for malformed time strings rather than crashing', async () => {
+      // Defense-in-depth note: `npm-pick-manifest` itself rejects versions
+      // whose `time[version]` is a truthy-but-unparseable string (isBefore
+      // returns false when `Date.parse(...)` is NaN). So getPackageMetadata
+      // throws "Failed to fetch package metadata" rather than ever reaching
+      // our defensive parser with an Invalid Date. Locking in the
+      // throw-rather-than-crash behavior.
+      const mockPackument = buildPackument('not-a-real-date');
+      vi.mocked(registryFetch.json).mockResolvedValue(mockPackument);
+
+      await expect(getPackageMetadata('example')).rejects.toThrow(
+        /Failed to fetch package metadata/
+      );
+    });
+
+    it('returns publishedAtKnown=true and real date when time[version] is valid', async () => {
+      const mockPackument = buildPackument('2024-06-15T08:30:00.000Z');
+      vi.mocked(registryFetch.json).mockResolvedValue(mockPackument);
+
+      const pkg = await getPackageMetadata('example');
+
+      expect(pkg.publishedAtKnown).toBe(true);
+      expect(pkg.publishedAt.toISOString()).toBe('2024-06-15T08:30:00.000Z');
+    });
+  });
 });

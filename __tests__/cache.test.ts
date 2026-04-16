@@ -15,6 +15,7 @@ describe('Cache', () => {
       name: 'test-package',
       version: '1.0.0',
       publishedAt: new Date('2024-01-01T00:00:00Z'),
+      publishedAtKnown: true,
       maintainers: ['test@example.com'],
       dependencies: {},
       devDependencies: {},
@@ -325,6 +326,52 @@ describe('Cache', () => {
 
       // Should be invalidated
       const loaded = await loadCache('test', '1.0.0', publishedAt);
+      expect(loaded).toBeNull();
+    });
+
+    it('should invalidate pre-v4 cache entries (publishedAtKnown migration)', async () => {
+      // v3 entries predate the publishedAtKnown field and may carry
+      // distorted daysSincePublish values from the Date.now() fallback bug.
+      // They must be re-analyzed, not served from cache.
+      const publishedAt = '2024-01-01T00:00:00.000Z';
+
+      await saveCache('test', '1.0.0', publishedAt, mockResult);
+
+      const { createHash } = await import('crypto');
+      const key = createHash('sha1')
+        .update('test@1.0.0')
+        .digest('hex');
+      const cachePath = join(testCacheDir, 'entries', `${key}.json`);
+
+      const data = await fs.readFile(cachePath, 'utf-8');
+      const entry = JSON.parse(data);
+      entry.cacheVersion = 3; // Pre-fix version
+      await fs.writeFile(cachePath, JSON.stringify(entry));
+
+      const loaded = await loadCache('test', '1.0.0', publishedAt);
+      expect(loaded).toBeNull();
+    });
+  });
+
+  describe('unknown publish date cache key', () => {
+    it('should save and load with "unknown" sentinel key consistently', async () => {
+      // When the registry returns no parseable time[version], install.ts
+      // passes 'unknown' as the cache key instead of an ISO string. This
+      // must be stable across runs — same key → cache hit.
+      await saveCache('mystery-pkg', '1.0.0', 'unknown', mockResult);
+
+      const loaded = await loadCache('mystery-pkg', '1.0.0', 'unknown');
+
+      expect(loaded).not.toBeNull();
+      expect(loaded?.analysis.package.name).toBe('test-package');
+    });
+
+    it('should invalidate when cached with real date but loaded with "unknown"', async () => {
+      // If a package previously had a known date and now the registry
+      // omits it (or vice versa), the publishDate key changed → miss.
+      await saveCache('mystery-pkg', '1.0.0', '2024-01-01T00:00:00.000Z', mockResult);
+
+      const loaded = await loadCache('mystery-pkg', '1.0.0', 'unknown');
       expect(loaded).toBeNull();
     });
   });

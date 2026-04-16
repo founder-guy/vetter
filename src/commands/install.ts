@@ -41,9 +41,7 @@ export async function runInstallCommand(
     const normalizedGrade = options.failOnGrade.toUpperCase();
     if (!isValidGrade(normalizedGrade)) {
       console.error(
-        chalk.red(
-          `\nError: Invalid grade "${options.failOnGrade}". Must be A, B, C, D, E, or F.\n`
-        )
+        chalk.red(`\nError: Invalid grade "${options.failOnGrade}". Must be A, B, C, D, E, or F.\n`)
       );
       return 1;
     }
@@ -92,21 +90,24 @@ export async function runInstallCommand(
     let cacheAgeSeconds = 0;
     let fromCache = false;
 
+    // When the registry omits or mangles `time[version]`, publishedAt falls
+    // back to epoch. Using the fallback in the cache key would (a) throw on
+    // Invalid Date pre-fix, and (b) now yields a stable but misleading
+    // "1970" timestamp. Use an explicit 'unknown' sentinel instead so cache
+    // lookups remain stable across runs for packages with unknown dates.
+    const publishKey = packageSnapshot.publishedAtKnown
+      ? packageSnapshot.publishedAt.toISOString()
+      : 'unknown';
+
     if (options.cache !== false && !options.refresh) {
-      const cached = await loadCache(
-        packageSnapshot.name,
-        packageSnapshot.version,
-        packageSnapshot.publishedAt.toISOString()
-      );
+      const cached = await loadCache(packageSnapshot.name, packageSnapshot.version, publishKey);
       if (cached) {
         result = cached.analysis;
         cacheAgeSeconds = cached.cacheAgeSeconds;
         fromCache = true;
         // Log cache hit to stderr
         if (!options.json) {
-          console.error(
-            chalk.dim(`Using cached analysis (${formatAge(cacheAgeSeconds)} old)`)
-          );
+          console.error(chalk.dim(`Using cached analysis (${formatAge(cacheAgeSeconds)} old)`));
         }
       }
     }
@@ -122,9 +123,10 @@ export async function runInstallCommand(
       const workspace = await withSpinner(
         showSpinners,
         'Preparing workspace...',
-        () => prepareWorkspace(packageSnapshot.name, packageSnapshot.version, {
-          registry: options.registry,
-        }),
+        () =>
+          prepareWorkspace(packageSnapshot.name, packageSnapshot.version, {
+            registry: options.registry,
+          }),
         {
           successMessage: 'Workspace prepared',
           failureMessage: 'Failed to prepare workspace',
@@ -183,12 +185,7 @@ export async function runInstallCommand(
           : undefined;
 
         // Calculate score (uses fresh typosquatting analysis, not cached)
-        const score = calculateScore(
-          securityAnalysis,
-          metrics,
-          licenseInfo,
-          typosquattingAnalysis
-        );
+        const score = calculateScore(securityAnalysis, metrics, licenseInfo, typosquattingAnalysis);
 
         // Build result (typosquatting is NOT included in cached result)
         result = {
@@ -202,12 +199,7 @@ export async function runInstallCommand(
 
         // Save to cache (unless --no-cache)
         if (options.cache !== false) {
-          await saveCache(
-            packageSnapshot.name,
-            packageSnapshot.version,
-            packageSnapshot.publishedAt.toISOString(),
-            result
-          );
+          await saveCache(packageSnapshot.name, packageSnapshot.version, publishKey, result);
         }
       } finally {
         // Cleanup workspace (always runs, even on error)
@@ -235,37 +227,25 @@ export async function runInstallCommand(
     // Warn about degraded signals in JSON mode (via stderr so it doesn't pollute JSON)
     if (options.json) {
       if (finalResult.metrics.totalDependencyCount === -1) {
-        console.error(
-          'Warning: Unable to determine dependency count - analysis may be incomplete'
-        );
+        console.error('Warning: Unable to determine dependency count - analysis may be incomplete');
       }
       if (finalResult.security.status === 'unknown') {
-        console.error(
-          'Warning: Security audit failed - vulnerability status unknown'
-        );
+        console.error('Warning: Security audit failed - vulnerability status unknown');
       }
     }
 
     // Render report
     if (options.json) {
       console.log(
-        renderJsonReport(
-          finalResult,
-          typosquattingAnalysis,
-          fromCache,
-          cacheAgeSeconds,
-          { showDeps: !!options.deps }
-        )
+        renderJsonReport(finalResult, typosquattingAnalysis, fromCache, cacheAgeSeconds, {
+          showDeps: !!options.deps,
+        })
       );
     } else {
       console.log(
-        renderTextReport(
-          finalResult,
-          typosquattingAnalysis,
-          fromCache,
-          cacheAgeSeconds,
-          { showDeps: !!options.deps }
-        )
+        renderTextReport(finalResult, typosquattingAnalysis, fromCache, cacheAgeSeconds, {
+          showDeps: !!options.deps,
+        })
       );
     }
 

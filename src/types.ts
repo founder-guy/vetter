@@ -49,7 +49,16 @@ export interface LicenseInfo {
 export interface PackageSnapshot {
   name: string;
   version: string;
+  /**
+   * Publish date for this version. If the registry did not return a
+   * parseable timestamp, this falls back to `new Date(0)` (epoch) and
+   * `publishedAtKnown` is false — consumers must check the flag and
+   * degrade gracefully (skip age-based logic, use 'unknown' cache key,
+   * apply the "Publish date unknown" penalty, etc.).
+   */
   publishedAt: Date;
+  /** False when the registry omitted or returned a malformed `time[version]`. */
+  publishedAtKnown: boolean;
   maintainers: string[];
   dependencies: Record<string, string>;
   devDependencies: Record<string, string>;

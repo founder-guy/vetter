@@ -32,13 +32,15 @@ async function countDependencies(
   if (lockfile) {
     try {
       const packages = lockfile.packages || {};
-      const nodeModulesCount = Object.keys(packages).filter(
-        (key) => key.startsWith('node_modules/')
+      const nodeModulesCount = Object.keys(packages).filter((key) =>
+        key.startsWith('node_modules/')
       ).length;
       return nodeModulesCount;
     } catch {
       // Fallback to temp workspace if parsing fails
-      console.error('[vetter] Warning: Could not parse provided lockfile, falling back to temp workspace');
+      console.error(
+        '[vetter] Warning: Could not parse provided lockfile, falling back to temp workspace'
+      );
     }
   }
 
@@ -63,8 +65,8 @@ async function countDependencies(
     // Use parsed lockfile from helper (this fixes the limitation!)
     if (result.lockfile) {
       const packages = result.lockfile.packages || {};
-      const nodeModulesCount = Object.keys(packages).filter(
-        (key) => key.startsWith('node_modules/')
+      const nodeModulesCount = Object.keys(packages).filter((key) =>
+        key.startsWith('node_modules/')
       ).length;
       return nodeModulesCount;
     }
@@ -94,9 +96,13 @@ export async function calculateMetrics(
   options?: import('../types.js').MetricsCalculationOptions
 ): Promise<PackageMetrics> {
   const now = new Date();
-  const daysSincePublish = Math.floor(
-    (now.getTime() - pkg.publishedAt.getTime()) / (1000 * 60 * 60 * 24)
-  );
+  // Sentinel -1 when publish date is unknown (mirrors totalDependencyCount: -1).
+  // Consumers (scoring, report) must check for < 0 to avoid nonsensical
+  // "Published 0 days ago" output and to avoid applying staleness penalties
+  // against an epoch fallback date.
+  const daysSincePublish = pkg.publishedAtKnown
+    ? Math.floor((now.getTime() - pkg.publishedAt.getTime()) / (1000 * 60 * 60 * 24))
+    : -1;
 
   const maintainerCount = pkg.maintainers.length;
   const directDependencyCount = Object.keys(pkg.dependencies).length;

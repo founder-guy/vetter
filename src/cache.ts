@@ -6,7 +6,7 @@ import type { AnalysisResult } from './types.js';
 import { getErrorMessage } from './utils/errors.js';
 
 // Constants
-const CACHE_VERSION = 3; // Bumped for dependencyBreakdown field addition
+const CACHE_VERSION = 4; // Bumped for publishedAtKnown field + daysSincePublish -1 sentinel
 const DEFAULT_TTL = 604800; // 7 days in seconds
 const SIZE_WARNING_THRESHOLD = 1024 * 1024; // 1MB
 const MAX_CACHE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -189,7 +189,9 @@ export async function saveCache(
     // Log warning if entry is large
     const byteSize = Buffer.byteLength(serialized, 'utf-8');
     if (byteSize > SIZE_WARNING_THRESHOLD) {
-      console.error(`[vetter] Warning: Cache entry for ${packageName}@${version} is ${Math.round(byteSize / 1024)}KB`);
+      console.error(
+        `[vetter] Warning: Cache entry for ${packageName}@${version} is ${Math.round(byteSize / 1024)}KB`
+      );
     }
 
     const cachePath = getCachePath(packageName, version);
@@ -235,7 +237,7 @@ async function getCacheSizeAndStats(): Promise<{
 
   try {
     const files = await fs.readdir(cacheDir);
-    const jsonFiles = files.filter(f => f.endsWith('.json'));
+    const jsonFiles = files.filter((f) => f.endsWith('.json'));
 
     // Parallelize stat operations for better performance
     const fileStats = await Promise.all(

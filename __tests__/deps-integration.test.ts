@@ -21,6 +21,7 @@ describe('--deps CLI Integration', () => {
       version: '1.0.0',
       description: 'Test package',
       publishedAt: new Date('2024-01-01'),
+      publishedAtKnown: true,
       maintainers: ['test@example.com'],
       license: 'MIT',
       dependencies: {},

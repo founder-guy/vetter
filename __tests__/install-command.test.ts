@@ -42,6 +42,7 @@ describe('runInstallCommand', () => {
     description: 'Test package',
     license: 'MIT',
     publishedAt: new Date('2024-01-01'),
+    publishedAtKnown: true,
     maintainers: ['test@example.com'],
     dependencies: {},
     devDependencies: {},

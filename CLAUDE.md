@@ -273,8 +273,8 @@ When adding new scoring rules, always add corresponding test in `__tests__/scori
 
 ## Build System
 
-- **tsup** compiles `src/cli.ts` to `dist/cli.js` (ESM)
-- **bin/vetter** imports `dist/cli.js`
+- **tsdown** compiles `src/cli.ts` to `dist/cli.mjs` (ESM, with `.d.mts` declarations via `--dts`)
+- **bin/vetter** imports `dist/cli.mjs`
 - Must run `npm run build` after code changes to test CLI
 - TypeScript strict mode enabled
 
@@ -390,9 +390,3 @@ vetter install @myorg/pkg --registry https://npm.pkg.github.com --no-install
 **Testing:**
 - Unit tests in [__tests__/security.test.ts](__tests__/security.test.ts) verify registry flag is passed to `npm audit`
 - Manual testing: `node bin/vetter install lodash --registry https://registry.npmjs.org --no-install`
-
-## Future Extension Points
-
-The codebase is designed to support:
-- GitHub API integration (maintainer activity, stars)
-- Custom license policy flags (`--allow-license`, `--deny-license`)

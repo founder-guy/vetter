@@ -355,7 +355,7 @@ This is a fundamental limitation of npm's audit mechanism. Vetter shows a spinne
 
 When you run `npx vetter install vetter`, you're scanning the **published npm package**, which only includes runtime dependencies (commander, nanospinner, chalk, npm-registry-fetch, npm-pick-manifest, zod). This typically results in a **B or C grade** with ~15-20 total dependencies.
 
-When you run Vetter **inside the cloned repository** (e.g., `node bin/vetter install vetter`), it scans the local development environment, which includes **devDependencies** like TypeScript, Vitest, ESLint, tsup, and their transitive dependencies. This results in a **D grade** with 100+ total dependencies.
+When you run Vetter **inside the cloned repository** (e.g., `node bin/vetter install vetter`), it scans the local development environment, which includes **devDependencies** like TypeScript, Vitest, ESLint, tsdown, and their transitive dependencies. This results in a **D grade** with 100+ total dependencies.
 
 **This is intentional and correct.** Vetter shows you what you'll *actually install* in your project. The published package is lean; the development environment is heavier. This distinction applies to any package with a significant devDependency footprint.
 

@@ -70,7 +70,7 @@ export async function analyzePackageSecurity(
 
       // Warn about install failures but continue (audit might still work)
       if (result.installError) {
-        console.warn('Install warning:', result.installError);
+        console.error(`[vetter] Warning: Install warning: ${result.installError}`);
       }
     }
 

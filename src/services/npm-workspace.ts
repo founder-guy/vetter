@@ -60,7 +60,7 @@ export interface TempWorkspaceOptions {
  *
  * try {
  *   if (installError) {
- *     console.warn('Install failed:', installError);
+ *     console.error('[vetter] Warning: Install failed:', installError);
  *   }
  *   if (lockfile) {
  *     // Use lockfile for analysis

@@ -38,7 +38,7 @@ async function countDependencies(
       return nodeModulesCount;
     } catch {
       // Fallback to temp workspace if parsing fails
-      console.warn('Could not parse provided lockfile, falling back to temp workspace');
+      console.error('[vetter] Warning: Could not parse provided lockfile, falling back to temp workspace');
     }
   }
 
@@ -56,7 +56,7 @@ async function countDependencies(
 
     // Check for install errors
     if (result.installError) {
-      console.warn('Could not count dependencies:', result.installError);
+      console.error(`[vetter] Warning: Could not count dependencies: ${result.installError}`);
       return -1;
     }
 
@@ -70,11 +70,11 @@ async function countDependencies(
     }
 
     // Lockfile unavailable even though install succeeded
-    console.warn('Could not count dependencies: lockfile unavailable');
+    console.error('[vetter] Warning: Could not count dependencies: lockfile unavailable');
     return -1;
   } catch (error) {
     // Return -1 to indicate failure (distinguishes from 0 dependencies)
-    console.warn('Could not count dependencies:', getErrorMessage(error));
+    console.error(`[vetter] Warning: Could not count dependencies: ${getErrorMessage(error)}`);
     return -1;
   } finally {
     // Cleanup temp directory

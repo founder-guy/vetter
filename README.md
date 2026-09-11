@@ -8,6 +8,16 @@
 
 **Vetter** analyzes npm packages before installation, evaluating security vulnerabilities, maintenance status, license risks, dependency bloat, and other risk factors. Get an **A–F grade** for any package and make informed decisions about what goes into your `node_modules`.
 
+## Project status
+
+Vetter is no longer actively developed. It still works and will stay on npm, but no new features are planned.
+
+Vetter grades packages on known vulnerabilities, staleness, bloat, license risk and typosquatting. It does not detect malware in a hijacked release of a legitimate package, which is the pattern behind the 2026 axios and keyv compromises. For that, look at:
+
+- npm's built-in [`min-release-age`](https://docs.npmjs.com/cli/v11/using-npm/config#min-release-age) setting (npm 11.10.0+). Adding `min-release-age=7` to your `.npmrc` makes npm skip versions published in the last 7 days.
+- [Aikido Safe Chain](https://github.com/AikidoSec/safe-chain) or [Socket Firewall](https://www.npmjs.com/package/sfw), which wrap `npm install` and block known malicious packages.
+- [npq](https://github.com/lirantal/npq), a similar pre-install auditor.
+
 ## Features
 
 - 🔍 **Security Analysis** - Runs `npm audit` to detect known vulnerabilities
@@ -293,11 +303,6 @@ src/
     └── breakdown.ts    # Dependency sub-tree analysis (for --deps flag)
 ```
 
-## Roadmap
-
-- [ ] GitHub maintainer activity analysis
-- [ ] Custom license policy flags (`--allow-license`, `--deny-license`)
-
 ## FAQ
 
 ### Can I use Vetter in CI/CD pipelines?
@@ -418,9 +423,6 @@ Vetter parses SPDX expressions like `MIT OR Apache-2.0`. If any option is permis
 **Legacy Format Handling:**
 Vetter normalizes legacy npm license formats (object `{ type: 'MIT' }` or array `[{ type: 'MIT' }]`) into standard SPDX strings.
 
-**Future Plans:**
-Custom license policies (`--allow-license GPL-3.0`, `--deny-license AGPL-3.0`) are planned for a future release.
-
 ### How can I see which dependencies cause bloat?
 
 Use the `--deps` flag to see a breakdown of the top 10 dependencies by sub-tree size:
@@ -439,4 +441,4 @@ ISC
 
 ## Contributing
 
-Contributions welcome! Please open an issue or PR.
+Vetter is no longer actively developed (see [Project status](#project-status)), so issues and pull requests may not get a response.

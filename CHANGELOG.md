@@ -1,3 +1,10 @@
+## [1.1.5](https://github.com/founder-guy/vetter/compare/v1.1.4...v1.1.5) (2026-09-11)
+
+
+### Bug Fixes
+
+* **deps:** resolve audit advisories and note end of active development ([#37](https://github.com/founder-guy/vetter/issues/37)) ([d510926](https://github.com/founder-guy/vetter/commit/d510926a2f5fbd648e39aa21e19f08246487d200))
+
 ## [1.1.4](https://github.com/founder-guy/vetter/compare/v1.1.3...v1.1.4) (2026-04-16)
 
 
